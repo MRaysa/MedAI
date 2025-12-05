@@ -192,7 +192,7 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" ref={dropdownRef}>
         <div className="flex items-center justify-between h-16">
           {/* Logo/Brand */}
-          <div className="flex-shrink-0 flex items-center">
+          <div className="flex-shrink-0 flex items-center mr-8">
             <Link to="/" className="flex items-center gap-2">
               <motion.div
                 whileHover={{ scale: 1.1 }}
