@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useContext } from "react";
 import { motion } from "framer-motion";
 import Swal from "sweetalert2";
 import {
@@ -14,15 +14,18 @@ import {
 } from "react-icons/fa";
 import { MdHealthAndSafety } from "react-icons/md";
 import { useNavigate, useLocation, Link } from "react-router";
-import {
-  signInWithEmailAndPassword,
-  signInWithPopup,
-  GoogleAuthProvider,
-  sendPasswordResetEmail,
-} from "firebase/auth";
-import { auth } from "../firebase/firebase.init";
+import { AuthContext } from "../contexts/AuthContext";
+import { ROLES, DOCTOR_VERIFICATION_STATUS } from "../contexts/AuthProvider";
 
 const SignIn = () => {
+  const {
+    signInUser,
+    googleSignIn,
+    resetPassword,
+    loading: authLoading,
+    authError,
+  } = useContext(AuthContext);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -33,7 +36,29 @@ const SignIn = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const emailRef = useRef();
-  const googleProvider = new GoogleAuthProvider();
+
+  // Get redirect path based on user role
+  const getRedirectPath = (dbUser, profile) => {
+    // If there's a specific destination from state, use it (unless role-restricted)
+    const fromPath = location?.state?.from;
+
+    if (!dbUser) return fromPath || "/";
+
+    switch (dbUser.role) {
+      case ROLES.ADMIN:
+        return fromPath?.startsWith("/admin") ? fromPath : "/admin/dashboard";
+      case ROLES.DOCTOR:
+        // Check if doctor is verified
+        if (profile?.verificationStatus === DOCTOR_VERIFICATION_STATUS.APPROVED) {
+          return fromPath?.startsWith("/doctor") ? fromPath : "/doctor/dashboard";
+        }
+        return "/doctor/verification-pending";
+      case ROLES.PATIENT:
+        return fromPath?.startsWith("/patient") ? fromPath : "/patient/dashboard";
+      default:
+        return fromPath || "/";
+    }
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -41,122 +66,112 @@ const SignIn = () => {
     setLoading(true);
 
     try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      const user = result.user;
-
-      const signInInfo = {
-        uid: user.uid,
-        email: user.email,
-        lastSignInTime: user.metadata.lastSignInTime,
-      };
-
-      const updateResponse = await fetch("http://localhost:3000/users", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(signInInfo),
-      });
-
-      if (!updateResponse.ok) {
-        const errorData = await updateResponse.json();
-        throw new Error(errorData.error || "Failed to update sign-in time");
-      }
+      const result = await signInUser(email, password);
 
       await Swal.fire({
         position: "top-end",
         icon: "success",
-        title: "Welcome back to MedAI!",
+        title: `Welcome back${result.dbUser?.firstName ? `, ${result.dbUser.firstName}` : ""}!`,
+        text: getRoleWelcomeMessage(result.dbUser?.role),
         showConfirmButton: false,
-        timer: 1500,
+        timer: 2000,
       });
 
-      navigate(location?.state?.from || "/");
+      const redirectPath = getRedirectPath(result.dbUser, result.profile);
+      navigate(redirectPath);
     } catch (error) {
       console.error("Sign-in error:", error);
-      setError(error.message);
 
       let errorMessage = error.message;
-      if (error.code === "auth/wrong-password") {
-        errorMessage = "Incorrect password";
-      } else if (error.code === "auth/user-not-found") {
-        errorMessage = "User not found";
+      if (error.message.includes("wrong-password") || error.message.includes("invalid-credential")) {
+        errorMessage = "Incorrect email or password";
+      } else if (error.message.includes("user-not-found")) {
+        errorMessage = "No account found with this email";
+      } else if (error.message.includes("too-many-requests")) {
+        errorMessage = "Too many failed attempts. Please try again later.";
+      } else if (error.message.includes("not found")) {
+        errorMessage = "Account not registered. Please sign up first.";
       }
 
-      await Swal.fire({
-        icon: "error",
-        title: "Sign-in Failed",
-        text: errorMessage,
-      });
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError("");
+
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
+      const result = await googleSignIn();
 
-      const updateResponse = await fetch("http://localhost:3000/users", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          uid: user.uid,
-          email: user.email,
-          lastSignInTime: user.metadata.lastSignInTime,
-          displayName: user.displayName,
-          photoURL: user.photoURL,
-        }),
-      });
-
-      if (!updateResponse.ok) {
-        throw new Error("Failed to update Google sign-in info");
+      if (result.isNewUser) {
+        await Swal.fire({
+          position: "top-end",
+          icon: "success",
+          title: "Welcome to MedAI!",
+          text: "Your account has been created successfully.",
+          showConfirmButton: false,
+          timer: 2000,
+        });
+      } else {
+        await Swal.fire({
+          position: "top-end",
+          icon: "success",
+          title: `Welcome back${result.dbUser?.firstName ? `, ${result.dbUser.firstName}` : ""}!`,
+          text: getRoleWelcomeMessage(result.dbUser?.role),
+          showConfirmButton: false,
+          timer: 2000,
+        });
       }
 
-      await Swal.fire({
-        position: "top-end",
-        icon: "success",
-        title: "Welcome to MedAI!",
-        showConfirmButton: false,
-        timer: 1500,
-      });
-
-      navigate("/");
+      const redirectPath = getRedirectPath(result.dbUser, result.profile);
+      navigate(redirectPath);
     } catch (error) {
       console.error("Google sign-in error:", error);
       setError(error.message);
-
-      await Swal.fire({
-        icon: "error",
-        title: "Google Sign-in Failed",
-        text: error.message,
-      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleForgetPassword = () => {
-    const email = emailRef.current.value;
+  const handleForgetPassword = async () => {
+    const emailValue = emailRef.current?.value;
     setError("");
 
-    if (!email) {
+    if (!emailValue) {
       setError("Please enter your email first");
       return;
     }
 
-    sendPasswordResetEmail(auth, email)
-      .then(() => {
-        Swal.fire({
-          icon: "success",
-          title: "Password Reset Email Sent",
-          text: "Please check your inbox for the password reset link.",
-        });
-      })
-      .catch((error) => {
-        setError(error.message);
+    try {
+      await resetPassword(emailValue);
+      await Swal.fire({
+        icon: "success",
+        title: "Password Reset Email Sent",
+        text: "Please check your inbox for the password reset link.",
       });
+    } catch (error) {
+      let errorMessage = error.message;
+      if (error.message.includes("user-not-found")) {
+        errorMessage = "No account found with this email address.";
+      }
+      setError(errorMessage);
+    }
+  };
+
+  const getRoleWelcomeMessage = (role) => {
+    switch (role) {
+      case ROLES.ADMIN:
+        return "Access your admin dashboard to manage the platform.";
+      case ROLES.DOCTOR:
+        return "Access your dashboard to manage patients and appointments.";
+      case ROLES.PATIENT:
+        return "Access your health dashboard and connect with doctors.";
+      default:
+        return "Your health journey continues.";
+    }
   };
 
   const features = [
@@ -165,6 +180,9 @@ const SignIn = () => {
     { icon: FaBrain, text: "AI-Powered Health Insights" },
     { icon: FaShieldAlt, text: "HIPAA Compliant & Secure" },
   ];
+
+  const displayError = error || authError;
+  const isLoading = loading || authLoading;
 
   return (
     <div className="min-h-screen flex">
@@ -284,30 +302,24 @@ const SignIn = () => {
             {/* Header */}
             <div className="text-center mb-8">
               <h2 className="text-2xl font-bold text-gray-800">Sign In</h2>
-              <p className="text-gray-500 mt-2">
-                Access your health dashboard
-              </p>
+              <p className="text-gray-500 mt-2">Access your health dashboard</p>
             </div>
 
             {/* Error Message */}
-            {error && (
+            {displayError && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-2"
               >
-                <svg
-                  className="w-5 h-5 flex-shrink-0"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
+                <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path
                     fillRule="evenodd"
                     d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
                     clipRule="evenodd"
                   />
                 </svg>
-                <p className="text-sm">{error}</p>
+                <p className="text-sm">{displayError}</p>
               </motion.div>
             )}
 
@@ -315,10 +327,7 @@ const SignIn = () => {
             <form onSubmit={handleLogin} className="space-y-5">
               {/* Email Field */}
               <div>
-                <label
-                  htmlFor="email"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                   Email Address
                 </label>
                 <div className="relative">
@@ -340,10 +349,7 @@ const SignIn = () => {
 
               {/* Password Field */}
               <div>
-                <label
-                  htmlFor="password"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                   Password
                 </label>
                 <div className="relative">
@@ -365,11 +371,7 @@ const SignIn = () => {
                     className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition"
                     onClick={() => setShowPassword(!showPassword)}
                   >
-                    {showPassword ? (
-                      <FaEyeSlash className="text-lg" />
-                    ) : (
-                      <FaEye className="text-lg" />
-                    )}
+                    {showPassword ? <FaEyeSlash className="text-lg" /> : <FaEye className="text-lg" />}
                   </button>
                 </div>
               </div>
@@ -399,19 +401,16 @@ const SignIn = () => {
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
                 type="submit"
-                disabled={loading}
+                disabled={isLoading}
                 className={`w-full py-3.5 px-4 rounded-xl text-white font-semibold transition-all duration-300 shadow-lg ${
-                  loading
+                  isLoading
                     ? "bg-teal-400 cursor-not-allowed"
                     : "bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 hover:shadow-teal-500/25"
                 }`}
               >
-                {loading ? (
+                {isLoading ? (
                   <span className="flex items-center justify-center gap-2">
-                    <svg
-                      className="animate-spin h-5 w-5"
-                      viewBox="0 0 24 24"
-                    >
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
                       <circle
                         className="opacity-25"
                         cx="12"
@@ -440,9 +439,7 @@ const SignIn = () => {
                   <div className="w-full border-t border-gray-200"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-white text-gray-500">
-                    Or continue with
-                  </span>
+                  <span className="px-4 bg-white text-gray-500">Or continue with</span>
                 </div>
               </div>
 
@@ -452,12 +449,11 @@ const SignIn = () => {
                 whileTap={{ scale: 0.99 }}
                 type="button"
                 onClick={handleGoogleLogin}
-                className="w-full flex items-center justify-center gap-3 py-3.5 px-4 border-2 border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-300"
+                disabled={isLoading}
+                className="w-full flex items-center justify-center gap-3 py-3.5 px-4 border-2 border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <FaGoogle className="text-red-500 text-lg" />
-                <span className="font-medium text-gray-700">
-                  Continue with Google
-                </span>
+                <span className="font-medium text-gray-700">Continue with Google</span>
               </motion.button>
             </form>
 
@@ -465,10 +461,7 @@ const SignIn = () => {
             <div className="mt-8 text-center">
               <p className="text-gray-600">
                 Don't have an account?{" "}
-                <Link
-                  to="/signup"
-                  className="font-semibold text-teal-600 hover:text-teal-700 transition"
-                >
+                <Link to="/signup" className="font-semibold text-teal-600 hover:text-teal-700 transition">
                   Create Account
                 </Link>
               </p>

@@ -15,24 +15,27 @@ import {
   FaBrain,
   FaCamera,
   FaCheck,
+  FaStethoscope,
+  FaUserInjured,
 } from "react-icons/fa";
 import { MdHealthAndSafety } from "react-icons/md";
 import { useNavigate, Link } from "react-router";
 import { AuthContext } from "../contexts/AuthContext";
+import { ROLES } from "../contexts/AuthProvider";
 import Swal from "sweetalert2";
 
 const SignUp = () => {
-  const { createUser, googleSignIn, updateUser, loading } =
-    useContext(AuthContext);
+  const { createUser, googleSignIn, loading, authError } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
     password: "",
     photoURL: "",
     phone: "",
-    address: "",
+    role: ROLES.PATIENT, // Default role
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -40,20 +43,20 @@ const SignUp = () => {
   const [imagePreview, setImagePreview] = useState(null);
   const [useImageUrl, setUseImageUrl] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validateForm = () => {
     const newErrors = {};
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z]).{6,}$/;
     const phoneRegex = /^[0-9]{10,15}$/;
 
-    if (!formData.name.trim()) newErrors.name = "Name is required";
-    if (!formData.email.includes("@"))
-      newErrors.email = "Valid email is required";
+    if (!formData.firstName.trim()) newErrors.firstName = "First name is required";
+    if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
+    if (!formData.email.includes("@")) newErrors.email = "Valid email is required";
     if (!passwordRegex.test(formData.password)) {
-      newErrors.password =
-        "Password must be at least 6 characters with uppercase and lowercase";
+      newErrors.password = "Password must be at least 6 characters with uppercase and lowercase";
     }
-    if (formData.phone && !phoneRegex.test(formData.phone)) {
+    if (formData.phone && !phoneRegex.test(formData.phone.replace(/\D/g, ""))) {
       newErrors.phone = "Please enter a valid phone number";
     }
     if (formData.photoURL && !isValidUrl(formData.photoURL)) {
@@ -61,6 +64,12 @@ const SignUp = () => {
     }
 
     setErrors(newErrors);
+
+    // Log validation errors for debugging
+    if (Object.keys(newErrors).length > 0) {
+      console.log("Validation errors:", newErrors);
+    }
+
     return Object.keys(newErrors).length === 0;
   };
 
@@ -80,6 +89,10 @@ const SignUp = () => {
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
+  };
+
+  const handleRoleSelect = (role) => {
+    setFormData((prev) => ({ ...prev, role }));
   };
 
   const handleImageUrlChange = (e) => {
@@ -105,97 +118,83 @@ const SignUp = () => {
     }
   };
 
-  const saveUserToDatabase = async (userProfile) => {
-    try {
-      const response = await fetch("http://localhost:3000/users", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userProfile),
-      });
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error("Error saving user to database:", error);
-      throw error;
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
-
-    try {
-      const userCredential = await createUser(
-        formData.email,
-        formData.password
-      );
-      const user = userCredential.user;
-
-      const userProfile = {
-        uid: user.uid,
-        displayName: formData.name,
-        email: formData.email,
-        photoURL: formData.photoURL || "",
-        phoneNumber: formData.phone || "",
-        address: formData.address || "",
-        createdAt: new Date().toISOString(),
-      };
-
-      await updateUser({
-        displayName: formData.name,
-        photoURL: formData.photoURL || "",
-      });
-
-      const dbResponse = await saveUserToDatabase(userProfile);
-
-      if (dbResponse.insertedId) {
-        Swal.fire({
-          position: "top-end",
-          icon: "success",
-          title: "Welcome to MedAI!",
-          text: "Your health journey begins now.",
-          showConfirmButton: false,
-          timer: 1500,
-        });
-        navigate("/");
-      }
-    } catch (error) {
-      console.error("Signup error:", error);
-      setErrors({ firebase: error.message });
+    console.log("Form submitted, validating...");
+    console.log("Form data:", { ...formData, password: "***hidden***" });
+    if (!validateForm()) {
+      console.log("Validation failed, errors:", errors);
+      return;
     }
-  };
+    console.log("Validation passed, creating user...");
 
-  const handleGoogleRegister = async () => {
+    setIsSubmitting(true);
     try {
-      const result = await googleSignIn();
-      const user = result.user;
-
-      const userProfile = {
-        uid: user.uid,
-        displayName: user.displayName || "",
-        email: user.email || "",
-        photoURL: user.photoURL || "",
-        phoneNumber: "",
-        address: "",
-        createdAt: new Date().toISOString(),
-      };
-
-      await saveUserToDatabase(userProfile);
+      const result = await createUser(formData.email, formData.password, formData.role, {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phone,
+        photoURL: formData.photoURL,
+      });
 
       Swal.fire({
         position: "top-end",
         icon: "success",
         title: "Welcome to MedAI!",
+        text: formData.role === ROLES.DOCTOR
+          ? "Please check your email to verify your account. Your doctor profile will be reviewed by our admin team."
+          : "Your health journey begins now. Please verify your email.",
         showConfirmButton: false,
-        timer: 1500,
+        timer: 3000,
       });
 
-      navigate("/");
+      // Redirect based on role
+      if (formData.role === ROLES.DOCTOR) {
+        navigate("/doctor/complete-profile");
+      } else {
+        navigate("/patient/dashboard");
+      }
     } catch (error) {
+      console.error("Signup error:", error);
       setErrors({ firebase: error.message });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGoogleRegister = async () => {
+    setIsSubmitting(true);
+    try {
+      const result = await googleSignIn(formData.role);
+
+      Swal.fire({
+        position: "top-end",
+        icon: "success",
+        title: "Welcome to MedAI!",
+        text: result.isNewUser
+          ? (formData.role === ROLES.DOCTOR
+            ? "Your doctor profile will be reviewed by our admin team."
+            : "Your health journey begins now!")
+          : "Welcome back!",
+        showConfirmButton: false,
+        timer: 2000,
+      });
+
+      // Redirect based on role
+      if (result.isNewUser && formData.role === ROLES.DOCTOR) {
+        navigate("/doctor/complete-profile");
+      } else if (result.dbUser?.role === ROLES.DOCTOR) {
+        navigate("/doctor/dashboard");
+      } else if (result.dbUser?.role === ROLES.ADMIN) {
+        navigate("/admin/dashboard");
+      } else {
+        navigate("/patient/dashboard");
+      }
+    } catch (error) {
+      console.error("Google signup error:", error);
+      setErrors({ firebase: error.message });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -224,6 +223,27 @@ const SignUp = () => {
   };
 
   const pwStrength = passwordStrength();
+
+  const roleOptions = [
+    {
+      role: ROLES.PATIENT,
+      title: "Patient",
+      description: "Track health, book appointments, access records",
+      icon: FaUserInjured,
+      color: "from-blue-500 to-cyan-500",
+      bgColor: "bg-blue-50",
+      borderColor: "border-blue-500",
+    },
+    {
+      role: ROLES.DOCTOR,
+      title: "Doctor",
+      description: "Manage patients, appointments, consultations",
+      icon: FaStethoscope,
+      color: "from-teal-500 to-emerald-500",
+      bgColor: "bg-teal-50",
+      borderColor: "border-teal-500",
+    },
+  ];
 
   return (
     <div className="min-h-screen flex">
@@ -344,14 +364,12 @@ const SignUp = () => {
             {/* Header */}
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold text-gray-800">Create Account</h2>
-              <p className="text-gray-500 mt-2">
-                Join MedAI for better healthcare
-              </p>
+              <p className="text-gray-500 mt-2">Join MedAI for better healthcare</p>
             </div>
 
             {/* Progress Steps */}
             <div className="flex items-center justify-center gap-2 mb-6">
-              {[1, 2].map((step) => (
+              {[1, 2, 3].map((step) => (
                 <div key={step} className="flex items-center">
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
@@ -362,9 +380,9 @@ const SignUp = () => {
                   >
                     {currentStep > step ? <FaCheck className="text-xs" /> : step}
                   </div>
-                  {step < 2 && (
+                  {step < 3 && (
                     <div
-                      className={`w-12 h-1 mx-1 rounded ${
+                      className={`w-8 h-1 mx-1 rounded ${
                         currentStep > step ? "bg-teal-500" : "bg-gray-200"
                       }`}
                     ></div>
@@ -373,31 +391,127 @@ const SignUp = () => {
               ))}
             </div>
 
+            {/* Step Labels */}
+            <div className="flex justify-between text-xs text-gray-500 mb-6 px-2">
+              <span className={currentStep >= 1 ? "text-teal-600 font-medium" : ""}>Role</span>
+              <span className={currentStep >= 2 ? "text-teal-600 font-medium" : ""}>Account</span>
+              <span className={currentStep >= 3 ? "text-teal-600 font-medium" : ""}>Details</span>
+            </div>
+
             {/* Error Message */}
-            {errors.firebase && (
+            {(errors.firebase || authError) && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-2"
               >
-                <svg
-                  className="w-5 h-5 flex-shrink-0"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
+                <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path
                     fillRule="evenodd"
                     d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
                     clipRule="evenodd"
                   />
                 </svg>
-                <p className="text-sm">{errors.firebase}</p>
+                <p className="text-sm">{errors.firebase || authError}</p>
               </motion.div>
             )}
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Step 1: Role Selection */}
               {currentStep === 1 && (
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="space-y-4"
+                >
+                  <div className="text-center mb-4">
+                    <h3 className="text-lg font-semibold text-gray-800">I want to join as a</h3>
+                    <p className="text-sm text-gray-500">Select your account type</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    {roleOptions.map((option) => (
+                      <motion.button
+                        key={option.role}
+                        type="button"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handleRoleSelect(option.role)}
+                        className={`w-full p-4 rounded-xl border-2 transition-all duration-300 text-left ${
+                          formData.role === option.role
+                            ? `${option.borderColor} ${option.bgColor}`
+                            : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                        }`}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div
+                            className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                              formData.role === option.role
+                                ? `bg-gradient-to-r ${option.color}`
+                                : "bg-gray-100"
+                            }`}
+                          >
+                            <option.icon
+                              className={`text-xl ${
+                                formData.role === option.role ? "text-white" : "text-gray-500"
+                              }`}
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <h4
+                              className={`font-semibold ${
+                                formData.role === option.role ? "text-gray-800" : "text-gray-700"
+                              }`}
+                            >
+                              {option.title}
+                            </h4>
+                            <p className="text-sm text-gray-500">{option.description}</p>
+                          </div>
+                          {formData.role === option.role && (
+                            <div className="w-6 h-6 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-full flex items-center justify-center">
+                              <FaCheck className="text-white text-xs" />
+                            </div>
+                          )}
+                        </div>
+                      </motion.button>
+                    ))}
+                  </div>
+
+                  {formData.role === ROLES.DOCTOR && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-4"
+                    >
+                      <div className="flex items-start gap-3">
+                        <FaShieldAlt className="text-amber-600 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-amber-800 font-medium">Verification Required</p>
+                          <p className="text-xs text-amber-700 mt-1">
+                            Doctor accounts require verification. You'll need to provide your medical license
+                            and credentials for admin approval.
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* Next Button */}
+                  <motion.button
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    type="button"
+                    onClick={() => setCurrentStep(2)}
+                    className="w-full py-3.5 px-4 rounded-xl text-white font-semibold bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 transition-all duration-300 shadow-lg hover:shadow-teal-500/25 mt-6"
+                  >
+                    Continue as {formData.role === ROLES.DOCTOR ? "Doctor" : "Patient"}
+                  </motion.button>
+                </motion.div>
+              )}
+
+              {/* Step 2: Basic Info */}
+              {currentStep === 2 && (
                 <motion.div
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -430,42 +544,51 @@ const SignUp = () => {
                     <p className="text-xs text-gray-500 mt-2">Upload profile photo</p>
                   </div>
 
-                  {/* Name Field */}
-                  <div>
-                    <label
-                      htmlFor="name"
-                      className="block text-sm font-medium text-gray-700 mb-2"
-                    >
-                      Full Name
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <FaUser className="text-gray-400" />
-                      </div>
+                  {/* Name Fields */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        First Name
+                      </label>
                       <input
-                        id="name"
-                        name="name"
+                        name="firstName"
                         type="text"
-                        value={formData.name}
+                        value={formData.firstName}
                         onChange={handleChange}
-                        className={`w-full pl-11 pr-4 py-3 border ${
-                          errors.name ? "border-red-300" : "border-gray-200"
+                        className={`w-full px-4 py-3 border ${
+                          errors.firstName ? "border-red-300" : "border-gray-200"
                         } rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition bg-gray-50 focus:bg-white`}
-                        placeholder="John Doe"
+                        placeholder="John"
                         required
                       />
+                      {errors.firstName && (
+                        <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>
+                      )}
                     </div>
-                    {errors.name && (
-                      <p className="text-red-500 text-xs mt-1">{errors.name}</p>
-                    )}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Last Name
+                      </label>
+                      <input
+                        name="lastName"
+                        type="text"
+                        value={formData.lastName}
+                        onChange={handleChange}
+                        className={`w-full px-4 py-3 border ${
+                          errors.lastName ? "border-red-300" : "border-gray-200"
+                        } rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition bg-gray-50 focus:bg-white`}
+                        placeholder="Doe"
+                        required
+                      />
+                      {errors.lastName && (
+                        <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>
+                      )}
+                    </div>
                   </div>
 
                   {/* Email Field */}
                   <div>
-                    <label
-                      htmlFor="email"
-                      className="block text-sm font-medium text-gray-700 mb-2"
-                    >
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Email Address
                     </label>
                     <div className="relative">
@@ -473,7 +596,6 @@ const SignUp = () => {
                         <FaEnvelope className="text-gray-400" />
                       </div>
                       <input
-                        id="email"
                         name="email"
                         type="email"
                         value={formData.email}
@@ -485,25 +607,17 @@ const SignUp = () => {
                         required
                       />
                     </div>
-                    {errors.email && (
-                      <p className="text-red-500 text-xs mt-1">{errors.email}</p>
-                    )}
+                    {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
                   </div>
 
                   {/* Password Field */}
                   <div>
-                    <label
-                      htmlFor="password"
-                      className="block text-sm font-medium text-gray-700 mb-2"
-                    >
-                      Password
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                         <FaLock className="text-gray-400" />
                       </div>
                       <input
-                        id="password"
                         name="password"
                         type={showPassword ? "text" : "password"}
                         value={formData.password}
@@ -534,9 +648,7 @@ const SignUp = () => {
                             <div
                               key={level}
                               className={`h-1 flex-1 rounded ${
-                                pwStrength.strength >= level
-                                  ? pwStrength.color
-                                  : "bg-gray-200"
+                                pwStrength.strength >= level ? pwStrength.color : "bg-gray-200"
                               }`}
                             ></div>
                           ))}
@@ -559,37 +671,75 @@ const SignUp = () => {
                     )}
                   </div>
 
-                  {/* Next Button */}
-                  <motion.button
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
-                    type="button"
-                    onClick={() => {
-                      if (formData.name && formData.email && formData.password) {
-                        setCurrentStep(2);
-                      } else {
-                        validateForm();
-                      }
-                    }}
-                    className="w-full py-3.5 px-4 rounded-xl text-white font-semibold bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 transition-all duration-300 shadow-lg hover:shadow-teal-500/25"
-                  >
-                    Continue
-                  </motion.button>
+                  {/* Button Group */}
+                  <div className="flex gap-3 pt-2">
+                    <motion.button
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      type="button"
+                      onClick={() => setCurrentStep(1)}
+                      className="flex-1 py-3.5 px-4 rounded-xl font-semibold border-2 border-gray-200 text-gray-700 hover:bg-gray-50 transition-all duration-300"
+                    >
+                      Back
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      type="button"
+                      onClick={() => {
+                        if (
+                          formData.firstName &&
+                          formData.lastName &&
+                          formData.email &&
+                          formData.password
+                        ) {
+                          setCurrentStep(3);
+                        } else {
+                          validateForm();
+                        }
+                      }}
+                      className="flex-1 py-3.5 px-4 rounded-xl text-white font-semibold bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 transition-all duration-300 shadow-lg hover:shadow-teal-500/25"
+                    >
+                      Continue
+                    </motion.button>
+                  </div>
                 </motion.div>
               )}
 
-              {currentStep === 2 && (
+              {/* Step 3: Additional Details */}
+              {currentStep === 3 && (
                 <motion.div
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   className="space-y-4"
                 >
+                  {/* Show validation errors from previous steps */}
+                  {(errors.firstName || errors.lastName || errors.email || errors.password) && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl"
+                    >
+                      <p className="font-medium text-sm mb-2">Please fix the following errors:</p>
+                      <ul className="text-sm list-disc list-inside space-y-1">
+                        {errors.firstName && <li>{errors.firstName}</li>}
+                        {errors.lastName && <li>{errors.lastName}</li>}
+                        {errors.email && <li>{errors.email}</li>}
+                        {errors.password && <li>{errors.password}</li>}
+                      </ul>
+                      <button
+                        type="button"
+                        onClick={() => setCurrentStep(2)}
+                        className="mt-2 text-sm text-red-600 underline hover:text-red-800"
+                      >
+                        Go back to fix
+                      </button>
+                    </motion.div>
+                  )}
+
                   {/* Phone Number Field */}
                   <div>
-                    <label
-                      htmlFor="phone"
-                      className="block text-sm font-medium text-gray-700 mb-2"
-                    >
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Phone Number <span className="text-gray-400">(Optional)</span>
                     </label>
                     <div className="relative">
@@ -597,7 +747,6 @@ const SignUp = () => {
                         <FaPhone className="text-gray-400" />
                       </div>
                       <input
-                        id="phone"
                         name="phone"
                         type="tel"
                         value={formData.phone}
@@ -608,33 +757,7 @@ const SignUp = () => {
                         placeholder="+1 (555) 123-4567"
                       />
                     </div>
-                    {errors.phone && (
-                      <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
-                    )}
-                  </div>
-
-                  {/* Address Field */}
-                  <div>
-                    <label
-                      htmlFor="address"
-                      className="block text-sm font-medium text-gray-700 mb-2"
-                    >
-                      Address <span className="text-gray-400">(Optional)</span>
-                    </label>
-                    <div className="relative">
-                      <div className="absolute top-3.5 left-0 pl-4 flex items-start pointer-events-none">
-                        <FaMapMarkerAlt className="text-gray-400" />
-                      </div>
-                      <textarea
-                        id="address"
-                        name="address"
-                        value={formData.address}
-                        onChange={handleChange}
-                        className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition bg-gray-50 focus:bg-white resize-none"
-                        placeholder="123 Main St, City, Country"
-                        rows="2"
-                      />
-                    </div>
+                    {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
                   </div>
 
                   {/* Image URL Option */}
@@ -646,9 +769,7 @@ const SignUp = () => {
                         onChange={() => setUseImageUrl(!useImageUrl)}
                         className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
                       />
-                      <span className="text-sm text-gray-600">
-                        Use image URL instead
-                      </span>
+                      <span className="text-sm text-gray-600">Use image URL instead</span>
                     </label>
 
                     {useImageUrl && (
@@ -668,12 +789,31 @@ const SignUp = () => {
                           } rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition bg-gray-50 focus:bg-white text-sm`}
                         />
                         {errors.photoURL && (
-                          <p className="text-red-500 text-xs mt-1">
-                            {errors.photoURL}
-                          </p>
+                          <p className="text-red-500 text-xs mt-1">{errors.photoURL}</p>
                         )}
                       </motion.div>
                     )}
+                  </div>
+
+                  {/* Account Summary */}
+                  <div className="bg-gray-50 rounded-xl p-4 mt-4">
+                    <h4 className="font-medium text-gray-800 mb-3">Account Summary</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Account Type:</span>
+                        <span className="font-medium text-gray-800 capitalize">{formData.role}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Name:</span>
+                        <span className="font-medium text-gray-800">
+                          {formData.firstName} {formData.lastName}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Email:</span>
+                        <span className="font-medium text-gray-800">{formData.email}</span>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Terms Checkbox */}
@@ -686,17 +826,11 @@ const SignUp = () => {
                     />
                     <label htmlFor="terms" className="text-sm text-gray-600">
                       I agree to the{" "}
-                      <Link
-                        to="/terms"
-                        className="text-teal-600 hover:underline"
-                      >
+                      <Link to="/terms" className="text-teal-600 hover:underline">
                         Terms of Service
                       </Link>{" "}
                       and{" "}
-                      <Link
-                        to="/privacy"
-                        className="text-teal-600 hover:underline"
-                      >
+                      <Link to="/privacy" className="text-teal-600 hover:underline">
                         Privacy Policy
                       </Link>
                     </label>
@@ -708,7 +842,7 @@ const SignUp = () => {
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.99 }}
                       type="button"
-                      onClick={() => setCurrentStep(1)}
+                      onClick={() => setCurrentStep(2)}
                       className="flex-1 py-3.5 px-4 rounded-xl font-semibold border-2 border-gray-200 text-gray-700 hover:bg-gray-50 transition-all duration-300"
                     >
                       Back
@@ -717,19 +851,16 @@ const SignUp = () => {
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.99 }}
                       type="submit"
-                      disabled={loading}
+                      disabled={loading || isSubmitting}
                       className={`flex-1 py-3.5 px-4 rounded-xl text-white font-semibold transition-all duration-300 shadow-lg ${
-                        loading
+                        loading || isSubmitting
                           ? "bg-teal-400 cursor-not-allowed"
                           : "bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 hover:shadow-teal-500/25"
                       }`}
                     >
-                      {loading ? (
+                      {loading || isSubmitting ? (
                         <span className="flex items-center justify-center gap-2">
-                          <svg
-                            className="animate-spin h-5 w-5"
-                            viewBox="0 0 24 24"
-                          >
+                          <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
                             <circle
                               className="opacity-25"
                               cx="12"
@@ -761,9 +892,7 @@ const SignUp = () => {
                   <div className="w-full border-t border-gray-200"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-white text-gray-500">
-                    Or sign up with
-                  </span>
+                  <span className="px-4 bg-white text-gray-500">Or sign up with</span>
                 </div>
               </div>
 
@@ -773,11 +902,12 @@ const SignUp = () => {
                 whileTap={{ scale: 0.99 }}
                 type="button"
                 onClick={handleGoogleRegister}
-                className="w-full flex items-center justify-center gap-3 py-3.5 px-4 border-2 border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-300"
+                disabled={isSubmitting}
+                className="w-full flex items-center justify-center gap-3 py-3.5 px-4 border-2 border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <FaGoogle className="text-red-500 text-lg" />
                 <span className="font-medium text-gray-700">
-                  Continue with Google
+                  Continue with Google as {formData.role === ROLES.DOCTOR ? "Doctor" : "Patient"}
                 </span>
               </motion.button>
             </form>
