@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import { useState, useContext } from "react";
 import { motion } from "framer-motion";
 import {
   FaGoogle,
@@ -7,10 +7,16 @@ import {
   FaLock,
   FaEye,
   FaEyeSlash,
-  FaImage,
   FaPhone,
   FaMapMarkerAlt,
+  FaHeartbeat,
+  FaShieldAlt,
+  FaUserMd,
+  FaBrain,
+  FaCamera,
+  FaCheck,
 } from "react-icons/fa";
+import { MdHealthAndSafety } from "react-icons/md";
 import { useNavigate, Link } from "react-router";
 import { AuthContext } from "../contexts/AuthContext";
 import Swal from "sweetalert2";
@@ -33,6 +39,7 @@ const SignUp = () => {
   const [errors, setErrors] = useState({});
   const [imagePreview, setImagePreview] = useState(null);
   const [useImageUrl, setUseImageUrl] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
 
   const validateForm = () => {
     const newErrors = {};
@@ -121,14 +128,12 @@ const SignUp = () => {
     if (!validateForm()) return;
 
     try {
-      // Create user with email and password
       const userCredential = await createUser(
         formData.email,
         formData.password
       );
       const user = userCredential.user;
 
-      // Prepare user profile for database
       const userProfile = {
         uid: user.uid,
         displayName: formData.name,
@@ -139,20 +144,19 @@ const SignUp = () => {
         createdAt: new Date().toISOString(),
       };
 
-      // Update Firebase user profile
       await updateUser({
         displayName: formData.name,
         photoURL: formData.photoURL || "",
       });
 
-      // Save to MongoDB
       const dbResponse = await saveUserToDatabase(userProfile);
 
       if (dbResponse.insertedId) {
         Swal.fire({
           position: "top-end",
           icon: "success",
-          title: "Your account has been created successfully!",
+          title: "Welcome to MedAI!",
+          text: "Your health journey begins now.",
           showConfirmButton: false,
           timer: 1500,
         });
@@ -169,7 +173,6 @@ const SignUp = () => {
       const result = await googleSignIn();
       const user = result.user;
 
-      // Prepare user profile from Google auth
       const userProfile = {
         uid: user.uid,
         displayName: user.displayName || "",
@@ -180,318 +183,620 @@ const SignUp = () => {
         createdAt: new Date().toISOString(),
       };
 
-      // Save to MongoDB
       await saveUserToDatabase(userProfile);
+
+      Swal.fire({
+        position: "top-end",
+        icon: "success",
+        title: "Welcome to MedAI!",
+        showConfirmButton: false,
+        timer: 1500,
+      });
 
       navigate("/");
     } catch (error) {
       setErrors({ firebase: error.message });
     }
   };
+
+  const features = [
+    { icon: FaHeartbeat, text: "Track Your Health Metrics" },
+    { icon: FaUserMd, text: "Connect with Specialists" },
+    { icon: FaBrain, text: "AI-Powered Diagnostics" },
+    { icon: FaShieldAlt, text: "Secure Health Records" },
+  ];
+
+  const passwordStrength = () => {
+    const password = formData.password;
+    if (!password) return { strength: 0, label: "" };
+
+    let strength = 0;
+    if (password.length >= 6) strength++;
+    if (password.length >= 8) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/[a-z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    if (/[^A-Za-z0-9]/.test(password)) strength++;
+
+    if (strength <= 2) return { strength: 1, label: "Weak", color: "bg-red-500" };
+    if (strength <= 4) return { strength: 2, label: "Medium", color: "bg-yellow-500" };
+    return { strength: 3, label: "Strong", color: "bg-green-500" };
+  };
+
+  const pwStrength = passwordStrength();
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md bg-white rounded-xl shadow-2xl overflow-hidden"
-      >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-center">
-          <h1 className="text-3xl font-bold text-white">Create Account</h1>
-          <p className="text-indigo-100 mt-2">Join us today!</p>
+    <div className="min-h-screen flex">
+      {/* Left Side - Branding & Features */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-teal-600 via-teal-700 to-cyan-800 relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full -translate-x-1/2 -translate-y-1/2"></div>
+          <div className="absolute bottom-0 right-0 w-80 h-80 bg-white rounded-full translate-x-1/3 translate-y-1/3"></div>
+          <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-white rounded-full -translate-x-1/2 -translate-y-1/2"></div>
         </div>
 
-        {/* Error Message */}
-        {errors.firebase && (
-          <div className="px-8 pt-6">
-            <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4">
-              <p>{errors.firebase}</p>
+        {/* Floating Medical Icons */}
+        <div className="absolute inset-0 overflow-hidden">
+          <motion.div
+            animate={{ y: [0, -20, 0] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-20 left-20 text-white/20 text-6xl"
+          >
+            <FaHeartbeat />
+          </motion.div>
+          <motion.div
+            animate={{ y: [0, 20, 0] }}
+            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-40 right-20 text-white/20 text-5xl"
+          >
+            <FaUserMd />
+          </motion.div>
+          <motion.div
+            animate={{ y: [0, -15, 0] }}
+            transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute bottom-40 left-32 text-white/20 text-7xl"
+          >
+            <MdHealthAndSafety />
+          </motion.div>
+          <motion.div
+            animate={{ y: [0, 25, 0] }}
+            transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute bottom-20 right-32 text-white/20 text-5xl"
+          >
+            <FaBrain />
+          </motion.div>
+        </div>
+
+        {/* Content */}
+        <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20">
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-3 mb-12">
+            <div className="h-14 w-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-lg border border-white/30">
+              <MdHealthAndSafety className="text-white text-3xl" />
+            </div>
+            <div>
+              <h1 className="text-white font-bold text-3xl">MedAI</h1>
+              <p className="text-teal-200 text-sm">Healthcare System</p>
+            </div>
+          </Link>
+
+          {/* Welcome Text */}
+          <div className="mb-12">
+            <h2 className="text-4xl xl:text-5xl font-bold text-white mb-4 leading-tight">
+              Start Your
+              <span className="block text-cyan-300">Health Journey Today</span>
+            </h2>
+            <p className="text-teal-100 text-lg max-w-md">
+              Join thousands of users taking control of their health with
+              AI-powered insights, personalized care, and seamless doctor
+              connectivity.
+            </p>
+          </div>
+
+          {/* Features List */}
+          <div className="space-y-4">
+            {features.map((feature, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 + 0.3 }}
+                className="flex items-center gap-4"
+              >
+                <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
+                  <feature.icon className="text-white text-lg" />
+                </div>
+                <span className="text-white font-medium">{feature.text}</span>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Trust Badge */}
+          <div className="mt-12 flex items-center gap-3 text-teal-200 text-sm">
+            <FaShieldAlt className="text-lg" />
+            <span>256-bit SSL Encrypted | HIPAA Compliant</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Side - Sign Up Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center bg-gray-50 p-6 sm:p-8 overflow-y-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full max-w-md my-8"
+        >
+          {/* Mobile Logo */}
+          <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
+            <div className="h-12 w-12 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg">
+              <MdHealthAndSafety className="text-white text-2xl" />
+            </div>
+            <div>
+              <h1 className="text-gray-800 font-bold text-2xl">MedAI</h1>
+              <p className="text-teal-600 text-xs">Healthcare System</p>
             </div>
           </div>
-        )}
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-8 space-y-4">
-          {/* Profile Picture Section */}
-          <div className="flex flex-col items-center space-y-2">
-            <div className="relative">
-              <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden border-2 border-indigo-100">
-                {imagePreview ? (
-                  <img
-                    src={imagePreview}
-                    alt="Profile preview"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <FaImage className="text-gray-400 text-3xl" />
-                )}
-              </div>
+          {/* Form Card */}
+          <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+            {/* Header */}
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">Create Account</h2>
+              <p className="text-gray-500 mt-2">
+                Join MedAI for better healthcare
+              </p>
             </div>
 
-            <div className="w-full">
-              <div className="flex items-center mb-2">
-                <input
-                  type="radio"
-                  id="upload-option"
-                  name="image-option"
-                  checked={!useImageUrl}
-                  onChange={() => setUseImageUrl(false)}
-                  className="mr-2"
-                />
-                <label
-                  htmlFor="upload-option"
-                  className="text-sm text-gray-700"
-                >
-                  Upload Image
-                </label>
-              </div>
-
-              {!useImageUrl && (
-                <label className="block w-full">
-                  <span className="sr-only">Choose profile photo</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="block w-full text-sm text-gray-500
-                      file:mr-4 file:py-2 file:px-4
-                      file:rounded-md file:border-0
-                      file:text-sm file:font-semibold
-                      file:bg-indigo-50 file:text-indigo-700
-                      hover:file:bg-indigo-100"
-                  />
-                </label>
-              )}
-
-              <div className="flex items-center mt-2">
-                <input
-                  type="radio"
-                  id="url-option"
-                  name="image-option"
-                  checked={useImageUrl}
-                  onChange={() => setUseImageUrl(true)}
-                  className="mr-2"
-                />
-                <label htmlFor="url-option" className="text-sm text-gray-700">
-                  Use Image URL
-                </label>
-              </div>
-
-              {useImageUrl && (
-                <div className="mt-1">
-                  <input
-                    type="text"
-                    name="photoURL"
-                    value={formData.photoURL}
-                    onChange={handleImageUrlChange}
-                    placeholder="https://example.com/image.jpg"
-                    className={`w-full px-3 py-2 border ${
-                      errors.photoURL ? "border-red-500" : "border-gray-300"
-                    } rounded-md text-sm shadow-sm`}
-                  />
-                  {errors.photoURL && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {errors.photoURL}
-                    </p>
+            {/* Progress Steps */}
+            <div className="flex items-center justify-center gap-2 mb-6">
+              {[1, 2].map((step) => (
+                <div key={step} className="flex items-center">
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
+                      currentStep >= step
+                        ? "bg-gradient-to-r from-teal-500 to-cyan-500 text-white"
+                        : "bg-gray-200 text-gray-500"
+                    }`}
+                  >
+                    {currentStep > step ? <FaCheck className="text-xs" /> : step}
+                  </div>
+                  {step < 2 && (
+                    <div
+                      className={`w-12 h-1 mx-1 rounded ${
+                        currentStep > step ? "bg-teal-500" : "bg-gray-200"
+                      }`}
+                    ></div>
                   )}
                 </div>
-              )}
+              ))}
             </div>
-          </div>
 
-          {/* Name Field */}
-          <div className="space-y-1">
-            <label
-              htmlFor="name"
-              className="flex items-center text-sm font-medium text-gray-700"
-            >
-              <FaUser className="mr-2 text-indigo-500" />
-              Full Name
-            </label>
-            <input
-              id="name"
-              name="name"
-              type="text"
-              value={formData.name}
-              onChange={handleChange}
-              className={`w-full px-4 py-2 border ${
-                errors.name ? "border-red-500" : "border-gray-300"
-              } rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition`}
-              placeholder="John Doe"
-              required
-            />
-            {errors.name && (
-              <p className="text-red-500 text-xs mt-1">{errors.name}</p>
-            )}
-          </div>
-
-          {/* Email Field */}
-          <div className="space-y-1">
-            <label
-              htmlFor="email"
-              className="flex items-center text-sm font-medium text-gray-700"
-            >
-              <FaEnvelope className="mr-2 text-indigo-500" />
-              Email Address
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleChange}
-              className={`w-full px-4 py-2 border ${
-                errors.email ? "border-red-500" : "border-gray-300"
-              } rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition`}
-              placeholder="your@email.com"
-              required
-            />
-            {errors.email && (
-              <p className="text-red-500 text-xs mt-1">{errors.email}</p>
-            )}
-          </div>
-
-          {/* Password Field */}
-          <div className="space-y-1">
-            <label
-              htmlFor="password"
-              className="flex items-center text-sm font-medium text-gray-700"
-            >
-              <FaLock className="mr-2 text-indigo-500" />
-              Password
-            </label>
-            <div className="relative">
-              <input
-                id="password"
-                name="password"
-                type={showPassword ? "text" : "password"}
-                value={formData.password}
-                onChange={handleChange}
-                className={`w-full px-4 py-2 border ${
-                  errors.password ? "border-red-500" : "border-gray-300"
-                } rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition`}
-                placeholder="••••••••"
-                required
-              />
-              <button
-                type="button"
-                className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                onClick={() => setShowPassword(!showPassword)}
+            {/* Error Message */}
+            {errors.firebase && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-2"
               >
-                {showPassword ? (
-                  <FaEyeSlash className="text-gray-500" />
-                ) : (
-                  <FaEye className="text-gray-500" />
-                )}
-              </button>
-            </div>
-            {errors.password ? (
-              <p className="text-red-500 text-xs mt-1">{errors.password}</p>
-            ) : (
-              <p className="text-gray-500 text-xs mt-1">
-                Must be at least 6 characters with uppercase and lowercase
+                <svg
+                  className="w-5 h-5 flex-shrink-0"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <p className="text-sm">{errors.firebase}</p>
+              </motion.div>
+            )}
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {currentStep === 1 && (
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="space-y-4"
+                >
+                  {/* Profile Picture */}
+                  <div className="flex flex-col items-center mb-4">
+                    <div className="relative group">
+                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-teal-100 to-cyan-100 flex items-center justify-center overflow-hidden border-3 border-teal-200 shadow-lg">
+                        {imagePreview ? (
+                          <img
+                            src={imagePreview}
+                            alt="Profile preview"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <FaUser className="text-teal-400 text-2xl" />
+                        )}
+                      </div>
+                      <label className="absolute bottom-0 right-0 w-7 h-7 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:from-teal-600 hover:to-cyan-600 transition">
+                        <FaCamera className="text-white text-xs" />
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">Upload profile photo</p>
+                  </div>
+
+                  {/* Name Field */}
+                  <div>
+                    <label
+                      htmlFor="name"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                      Full Name
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <FaUser className="text-gray-400" />
+                      </div>
+                      <input
+                        id="name"
+                        name="name"
+                        type="text"
+                        value={formData.name}
+                        onChange={handleChange}
+                        className={`w-full pl-11 pr-4 py-3 border ${
+                          errors.name ? "border-red-300" : "border-gray-200"
+                        } rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition bg-gray-50 focus:bg-white`}
+                        placeholder="John Doe"
+                        required
+                      />
+                    </div>
+                    {errors.name && (
+                      <p className="text-red-500 text-xs mt-1">{errors.name}</p>
+                    )}
+                  </div>
+
+                  {/* Email Field */}
+                  <div>
+                    <label
+                      htmlFor="email"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                      Email Address
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <FaEnvelope className="text-gray-400" />
+                      </div>
+                      <input
+                        id="email"
+                        name="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        className={`w-full pl-11 pr-4 py-3 border ${
+                          errors.email ? "border-red-300" : "border-gray-200"
+                        } rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition bg-gray-50 focus:bg-white`}
+                        placeholder="your@email.com"
+                        required
+                      />
+                    </div>
+                    {errors.email && (
+                      <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+                    )}
+                  </div>
+
+                  {/* Password Field */}
+                  <div>
+                    <label
+                      htmlFor="password"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                      Password
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <FaLock className="text-gray-400" />
+                      </div>
+                      <input
+                        id="password"
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        value={formData.password}
+                        onChange={handleChange}
+                        className={`w-full pl-11 pr-12 py-3 border ${
+                          errors.password ? "border-red-300" : "border-gray-200"
+                        } rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition bg-gray-50 focus:bg-white`}
+                        placeholder="Create a strong password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? (
+                          <FaEyeSlash className="text-lg" />
+                        ) : (
+                          <FaEye className="text-lg" />
+                        )}
+                      </button>
+                    </div>
+                    {/* Password Strength Indicator */}
+                    {formData.password && (
+                      <div className="mt-2">
+                        <div className="flex gap-1">
+                          {[1, 2, 3].map((level) => (
+                            <div
+                              key={level}
+                              className={`h-1 flex-1 rounded ${
+                                pwStrength.strength >= level
+                                  ? pwStrength.color
+                                  : "bg-gray-200"
+                              }`}
+                            ></div>
+                          ))}
+                        </div>
+                        <p
+                          className={`text-xs mt-1 ${
+                            pwStrength.strength === 1
+                              ? "text-red-500"
+                              : pwStrength.strength === 2
+                              ? "text-yellow-600"
+                              : "text-green-600"
+                          }`}
+                        >
+                          {pwStrength.label} password
+                        </p>
+                      </div>
+                    )}
+                    {errors.password && (
+                      <p className="text-red-500 text-xs mt-1">{errors.password}</p>
+                    )}
+                  </div>
+
+                  {/* Next Button */}
+                  <motion.button
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    type="button"
+                    onClick={() => {
+                      if (formData.name && formData.email && formData.password) {
+                        setCurrentStep(2);
+                      } else {
+                        validateForm();
+                      }
+                    }}
+                    className="w-full py-3.5 px-4 rounded-xl text-white font-semibold bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 transition-all duration-300 shadow-lg hover:shadow-teal-500/25"
+                  >
+                    Continue
+                  </motion.button>
+                </motion.div>
+              )}
+
+              {currentStep === 2 && (
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="space-y-4"
+                >
+                  {/* Phone Number Field */}
+                  <div>
+                    <label
+                      htmlFor="phone"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                      Phone Number <span className="text-gray-400">(Optional)</span>
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <FaPhone className="text-gray-400" />
+                      </div>
+                      <input
+                        id="phone"
+                        name="phone"
+                        type="tel"
+                        value={formData.phone}
+                        onChange={handleChange}
+                        className={`w-full pl-11 pr-4 py-3 border ${
+                          errors.phone ? "border-red-300" : "border-gray-200"
+                        } rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition bg-gray-50 focus:bg-white`}
+                        placeholder="+1 (555) 123-4567"
+                      />
+                    </div>
+                    {errors.phone && (
+                      <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
+                    )}
+                  </div>
+
+                  {/* Address Field */}
+                  <div>
+                    <label
+                      htmlFor="address"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                      Address <span className="text-gray-400">(Optional)</span>
+                    </label>
+                    <div className="relative">
+                      <div className="absolute top-3.5 left-0 pl-4 flex items-start pointer-events-none">
+                        <FaMapMarkerAlt className="text-gray-400" />
+                      </div>
+                      <textarea
+                        id="address"
+                        name="address"
+                        value={formData.address}
+                        onChange={handleChange}
+                        className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition bg-gray-50 focus:bg-white resize-none"
+                        placeholder="123 Main St, City, Country"
+                        rows="2"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Image URL Option */}
+                  <div>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={useImageUrl}
+                        onChange={() => setUseImageUrl(!useImageUrl)}
+                        className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
+                      />
+                      <span className="text-sm text-gray-600">
+                        Use image URL instead
+                      </span>
+                    </label>
+
+                    {useImageUrl && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        className="mt-2"
+                      >
+                        <input
+                          type="text"
+                          name="photoURL"
+                          value={formData.photoURL}
+                          onChange={handleImageUrlChange}
+                          placeholder="https://example.com/your-photo.jpg"
+                          className={`w-full px-4 py-3 border ${
+                            errors.photoURL ? "border-red-300" : "border-gray-200"
+                          } rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition bg-gray-50 focus:bg-white text-sm`}
+                        />
+                        {errors.photoURL && (
+                          <p className="text-red-500 text-xs mt-1">
+                            {errors.photoURL}
+                          </p>
+                        )}
+                      </motion.div>
+                    )}
+                  </div>
+
+                  {/* Terms Checkbox */}
+                  <div className="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      id="terms"
+                      required
+                      className="w-4 h-4 mt-0.5 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
+                    />
+                    <label htmlFor="terms" className="text-sm text-gray-600">
+                      I agree to the{" "}
+                      <Link
+                        to="/terms"
+                        className="text-teal-600 hover:underline"
+                      >
+                        Terms of Service
+                      </Link>{" "}
+                      and{" "}
+                      <Link
+                        to="/privacy"
+                        className="text-teal-600 hover:underline"
+                      >
+                        Privacy Policy
+                      </Link>
+                    </label>
+                  </div>
+
+                  {/* Button Group */}
+                  <div className="flex gap-3">
+                    <motion.button
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      type="button"
+                      onClick={() => setCurrentStep(1)}
+                      className="flex-1 py-3.5 px-4 rounded-xl font-semibold border-2 border-gray-200 text-gray-700 hover:bg-gray-50 transition-all duration-300"
+                    >
+                      Back
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      type="submit"
+                      disabled={loading}
+                      className={`flex-1 py-3.5 px-4 rounded-xl text-white font-semibold transition-all duration-300 shadow-lg ${
+                        loading
+                          ? "bg-teal-400 cursor-not-allowed"
+                          : "bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 hover:shadow-teal-500/25"
+                      }`}
+                    >
+                      {loading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <svg
+                            className="animate-spin h-5 w-5"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                              fill="none"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                            />
+                          </svg>
+                          Creating...
+                        </span>
+                      ) : (
+                        "Create Account"
+                      )}
+                    </motion.button>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Divider */}
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-4 bg-white text-gray-500">
+                    Or sign up with
+                  </span>
+                </div>
+              </div>
+
+              {/* Google Sign Up Button */}
+              <motion.button
+                whileHover={{ scale: 1.01, y: -1 }}
+                whileTap={{ scale: 0.99 }}
+                type="button"
+                onClick={handleGoogleRegister}
+                className="w-full flex items-center justify-center gap-3 py-3.5 px-4 border-2 border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-300"
+              >
+                <FaGoogle className="text-red-500 text-lg" />
+                <span className="font-medium text-gray-700">
+                  Continue with Google
+                </span>
+              </motion.button>
+            </form>
+
+            {/* Sign In Link */}
+            <div className="mt-6 text-center">
+              <p className="text-gray-600">
+                Already have an account?{" "}
+                <Link
+                  to="/signin"
+                  className="font-semibold text-teal-600 hover:text-teal-700 transition"
+                >
+                  Sign In
+                </Link>
               </p>
-            )}
-          </div>
-
-          {/* Phone Number Field */}
-          <div className="space-y-1">
-            <label
-              htmlFor="phone"
-              className="flex items-center text-sm font-medium text-gray-700"
-            >
-              <FaPhone className="mr-2 text-indigo-500" />
-              Phone Number
-            </label>
-            <input
-              id="phone"
-              name="phone"
-              type="tel"
-              value={formData.phone}
-              onChange={handleChange}
-              className={`w-full px-4 py-2 border ${
-                errors.phone ? "border-red-500" : "border-gray-300"
-              } rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition`}
-              placeholder="1234567890"
-            />
-            {errors.phone && (
-              <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
-            )}
-          </div>
-
-          {/* Address Field */}
-          <div className="space-y-1">
-            <label
-              htmlFor="address"
-              className="flex items-center text-sm font-medium text-gray-700"
-            >
-              <FaMapMarkerAlt className="mr-2 text-indigo-500" />
-              Address
-            </label>
-            <textarea
-              id="address"
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-              placeholder="123 Main St, City, Country"
-              rows="2"
-            />
-          </div>
-
-          {/* Submit Button */}
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            type="submit"
-            disabled={loading}
-            className={`w-full py-3 px-4 mt-4 rounded-lg text-white font-semibold ${
-              loading ? "bg-indigo-400" : "bg-indigo-600 hover:bg-indigo-700"
-            } transition-colors shadow-md`}
-          >
-            {loading ? "Creating Account..." : "Sign Up"}
-          </motion.button>
-
-          {/* Divider */}
-          <div className="relative my-4">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">
-                Or sign up with
-              </span>
             </div>
           </div>
-
-          {/* Social Login Buttons */}
-          <div className="flex justify-center">
-            <motion.button
-              whileHover={{ y: -2 }}
-              type="button"
-              onClick={handleGoogleRegister}
-              className="flex items-center justify-center py-2 px-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-            >
-              <FaGoogle className="text-red-500 mr-2" />
-              <span>Google</span>
-            </motion.button>
-          </div>
-        </form>
-
-        {/* Footer */}
-        <div className="bg-gray-50 px-8 py-4 text-center">
-          <p className="text-sm text-gray-600">
-            Already have an account?{" "}
-            <Link
-              to="/signin"
-              className="font-medium text-indigo-600 hover:text-indigo-500"
-            >
-              Sign in
-            </Link>
-          </p>
-        </div>
-      </motion.div>
+        </motion.div>
+      </div>
     </div>
   );
 };

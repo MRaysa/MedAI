@@ -1,17 +1,19 @@
 import React, { useState, useRef } from "react";
-// eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
 import Swal from "sweetalert2";
 import {
   FaGoogle,
-  FaFacebook,
-  FaGithub,
   FaEnvelope,
   FaLock,
   FaEye,
   FaEyeSlash,
+  FaHeartbeat,
+  FaShieldAlt,
+  FaUserMd,
+  FaBrain,
 } from "react-icons/fa";
-import { useNavigate, useLocation } from "react-router";
+import { MdHealthAndSafety } from "react-icons/md";
+import { useNavigate, useLocation, Link } from "react-router";
 import {
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -33,29 +35,6 @@ const SignIn = () => {
   const emailRef = useRef();
   const googleProvider = new GoogleAuthProvider();
 
-  // const handleLogin = async (e) => {
-  //   e.preventDefault();
-  //   setError("");
-  //   setLoading(true);
-
-  //   try {
-  //     await signInWithEmailAndPassword(auth, email, password);
-  //     navigate(location?.state?.from || "/");
-  //   } catch (err) {
-  //     setError(err.message);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-  // const handleGoogleLogin = async () => {
-  //   try {
-  //     await signInWithPopup(auth, googleProvider);
-  //     navigate("/");
-  //   } catch (err) {
-  //     setError(err.message);
-  //   }
-  // };
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
@@ -65,14 +44,12 @@ const SignIn = () => {
       const result = await signInWithEmailAndPassword(auth, email, password);
       const user = result.user;
 
-      // Prepare sign-in info
       const signInInfo = {
-        uid: user.uid, // Preferred identifier
-        email: user.email, // Fallback
+        uid: user.uid,
+        email: user.email,
         lastSignInTime: user.metadata.lastSignInTime,
       };
 
-      // Update last sign-in time in database
       const updateResponse = await fetch("http://localhost:3000/users", {
         method: "PATCH",
         headers: {
@@ -86,22 +63,19 @@ const SignIn = () => {
         throw new Error(errorData.error || "Failed to update sign-in time");
       }
 
-      // Show success message
       await Swal.fire({
         position: "top-end",
         icon: "success",
-        title: "Signed in successfully",
+        title: "Welcome back to MedAI!",
         showConfirmButton: false,
         timer: 1500,
       });
 
-      // Navigate to intended page or home
       navigate(location?.state?.from || "/");
     } catch (error) {
       console.error("Sign-in error:", error);
       setError(error.message);
 
-      // Show error message based on error type
       let errorMessage = error.message;
       if (error.code === "auth/wrong-password") {
         errorMessage = "Incorrect password";
@@ -124,7 +98,6 @@ const SignIn = () => {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
 
-      // Update database for Google sign-in
       const updateResponse = await fetch("http://localhost:3000/users", {
         method: "PATCH",
         headers: {
@@ -146,7 +119,7 @@ const SignIn = () => {
       await Swal.fire({
         position: "top-end",
         icon: "success",
-        title: "Signed in with Google",
+        title: "Welcome to MedAI!",
         showConfirmButton: false,
         timer: 1500,
       });
@@ -163,6 +136,7 @@ const SignIn = () => {
       });
     }
   };
+
   const handleForgetPassword = () => {
     const email = emailRef.current.value;
     setError("");
@@ -174,184 +148,348 @@ const SignIn = () => {
 
     sendPasswordResetEmail(auth, email)
       .then(() => {
-        alert("Password reset email sent. Please check your inbox.");
+        Swal.fire({
+          icon: "success",
+          title: "Password Reset Email Sent",
+          text: "Please check your inbox for the password reset link.",
+        });
       })
       .catch((error) => {
         setError(error.message);
       });
   };
 
+  const features = [
+    { icon: FaHeartbeat, text: "Real-time Health Monitoring" },
+    { icon: FaUserMd, text: "Connect with Expert Doctors" },
+    { icon: FaBrain, text: "AI-Powered Health Insights" },
+    { icon: FaShieldAlt, text: "HIPAA Compliant & Secure" },
+  ];
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md bg-white rounded-xl shadow-2xl overflow-hidden"
-      >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-center">
-          <h1 className="text-3xl font-bold text-white">Welcome Back</h1>
-          <p className="text-indigo-100 mt-2">Sign in to access your account</p>
+    <div className="min-h-screen flex">
+      {/* Left Side - Branding & Features */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-teal-600 via-teal-700 to-cyan-800 relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full -translate-x-1/2 -translate-y-1/2"></div>
+          <div className="absolute bottom-0 right-0 w-80 h-80 bg-white rounded-full translate-x-1/3 translate-y-1/3"></div>
+          <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-white rounded-full -translate-x-1/2 -translate-y-1/2"></div>
         </div>
 
-        {/* Error Message */}
-        {error && (
-          <div className="px-8 pt-6">
-            <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4">
-              <p>{error}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Form */}
-        <form onSubmit={handleLogin} className="p-8 space-y-6">
-          {/* Email Field */}
-          <div className="space-y-2">
-            <label
-              htmlFor="email"
-              className="flex items-center text-sm font-medium text-gray-700"
-            >
-              <FaEnvelope className="mr-2 text-indigo-500" />
-              Email Address
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              ref={emailRef}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-              placeholder="your@email.com"
-              required
-            />
-          </div>
-
-          {/* Password Field */}
-          <div className="space-y-2">
-            <label
-              htmlFor="password"
-              className="flex items-center text-sm font-medium text-gray-700"
-            >
-              <FaLock className="mr-2 text-indigo-500" />
-              Password
-            </label>
-            <div className="relative">
-              <input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-                placeholder="••••••••"
-                required
-                minLength="6"
-              />
-              <button
-                type="button"
-                className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? (
-                  <FaEyeSlash className="text-gray-500" />
-                ) : (
-                  <FaEye className="text-gray-500" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Remember Me & Forgot Password */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <input
-                id="remember-me"
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-              />
-              <label
-                htmlFor="remember-me"
-                className="ml-2 block text-sm text-gray-700"
-              >
-                Remember me
-              </label>
-            </div>
-            <button
-              type="button"
-              onClick={handleForgetPassword}
-              className="text-sm text-indigo-600 hover:text-indigo-500"
-            >
-              Forgot password?
-            </button>
-          </div>
-
-          {/* Submit Button */}
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            type="submit"
-            disabled={loading}
-            className={`w-full py-3 px-4 rounded-lg text-white font-semibold ${
-              loading ? "bg-indigo-400" : "bg-indigo-600 hover:bg-indigo-700"
-            } transition-colors shadow-md`}
+        {/* Floating Medical Icons */}
+        <div className="absolute inset-0 overflow-hidden">
+          <motion.div
+            animate={{ y: [0, -20, 0] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-20 left-20 text-white/20 text-6xl"
           >
-            {loading ? "Signing In..." : "Sign In"}
-          </motion.button>
-
-          {/* Divider */}
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">
-                Or continue with
-              </span>
-            </div>
-          </div>
-
-          {/* Social Login Buttons */}
-          <div className="grid grid-cols-3 gap-3">
-            <motion.button
-              whileHover={{ y: -2 }}
-              type="button"
-              onClick={handleGoogleLogin}
-              className="flex items-center justify-center py-2 px-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-            >
-              <FaGoogle className="text-red-500" />
-            </motion.button>
-            <motion.button
-              whileHover={{ y: -2 }}
-              type="button"
-              className="flex items-center justify-center py-2 px-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-            >
-              <FaFacebook className="text-blue-600" />
-            </motion.button>
-            <motion.button
-              whileHover={{ y: -2 }}
-              type="button"
-              className="flex items-center justify-center py-2 px-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-            >
-              <FaGithub className="text-gray-800" />
-            </motion.button>
-          </div>
-        </form>
-
-        {/* Footer */}
-        <div className="bg-gray-50 px-8 py-4 text-center">
-          <p className="text-sm text-gray-600">
-            Don't have an account?{" "}
-            <a
-              href="/signup"
-              className="font-medium text-indigo-600 hover:text-indigo-500"
-            >
-              Sign up
-            </a>
-          </p>
+            <FaHeartbeat />
+          </motion.div>
+          <motion.div
+            animate={{ y: [0, 20, 0] }}
+            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-40 right-20 text-white/20 text-5xl"
+          >
+            <FaUserMd />
+          </motion.div>
+          <motion.div
+            animate={{ y: [0, -15, 0] }}
+            transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute bottom-40 left-32 text-white/20 text-7xl"
+          >
+            <MdHealthAndSafety />
+          </motion.div>
+          <motion.div
+            animate={{ y: [0, 25, 0] }}
+            transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute bottom-20 right-32 text-white/20 text-5xl"
+          >
+            <FaBrain />
+          </motion.div>
         </div>
-      </motion.div>
+
+        {/* Content */}
+        <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20">
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-3 mb-12">
+            <div className="h-14 w-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-lg border border-white/30">
+              <MdHealthAndSafety className="text-white text-3xl" />
+            </div>
+            <div>
+              <h1 className="text-white font-bold text-3xl">MedAI</h1>
+              <p className="text-teal-200 text-sm">Healthcare System</p>
+            </div>
+          </Link>
+
+          {/* Welcome Text */}
+          <div className="mb-12">
+            <h2 className="text-4xl xl:text-5xl font-bold text-white mb-4 leading-tight">
+              Welcome Back to
+              <span className="block text-cyan-300">Your Health Journey</span>
+            </h2>
+            <p className="text-teal-100 text-lg max-w-md">
+              Access your personalized health dashboard, connect with doctors,
+              and take control of your wellness with AI-powered insights.
+            </p>
+          </div>
+
+          {/* Features List */}
+          <div className="space-y-4">
+            {features.map((feature, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 + 0.3 }}
+                className="flex items-center gap-4"
+              >
+                <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
+                  <feature.icon className="text-white text-lg" />
+                </div>
+                <span className="text-white font-medium">{feature.text}</span>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Trust Badge */}
+          <div className="mt-12 flex items-center gap-3 text-teal-200 text-sm">
+            <FaShieldAlt className="text-lg" />
+            <span>256-bit SSL Encrypted | HIPAA Compliant</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Side - Sign In Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center bg-gray-50 p-6 sm:p-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full max-w-md"
+        >
+          {/* Mobile Logo */}
+          <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
+            <div className="h-12 w-12 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg">
+              <MdHealthAndSafety className="text-white text-2xl" />
+            </div>
+            <div>
+              <h1 className="text-gray-800 font-bold text-2xl">MedAI</h1>
+              <p className="text-teal-600 text-xs">Healthcare System</p>
+            </div>
+          </div>
+
+          {/* Form Card */}
+          <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+            {/* Header */}
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-gray-800">Sign In</h2>
+              <p className="text-gray-500 mt-2">
+                Access your health dashboard
+              </p>
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-2"
+              >
+                <svg
+                  className="w-5 h-5 flex-shrink-0"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <p className="text-sm">{error}</p>
+              </motion.div>
+            )}
+
+            {/* Form */}
+            <form onSubmit={handleLogin} className="space-y-5">
+              {/* Email Field */}
+              <div>
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Email Address
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <FaEnvelope className="text-gray-400" />
+                  </div>
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    ref={emailRef}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition bg-gray-50 focus:bg-white"
+                    placeholder="your@email.com"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Password Field */}
+              <div>
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Password
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <FaLock className="text-gray-400" />
+                  </div>
+                  <input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-11 pr-12 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition bg-gray-50 focus:bg-white"
+                    placeholder="Enter your password"
+                    required
+                    minLength="6"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <FaEyeSlash className="text-lg" />
+                    ) : (
+                      <FaEye className="text-lg" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Remember Me & Forgot Password */}
+              <div className="flex items-center justify-between">
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-600">Remember me</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={handleForgetPassword}
+                  className="text-sm text-teal-600 hover:text-teal-700 font-medium transition"
+                >
+                  Forgot password?
+                </button>
+              </div>
+
+              {/* Submit Button */}
+              <motion.button
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+                type="submit"
+                disabled={loading}
+                className={`w-full py-3.5 px-4 rounded-xl text-white font-semibold transition-all duration-300 shadow-lg ${
+                  loading
+                    ? "bg-teal-400 cursor-not-allowed"
+                    : "bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 hover:shadow-teal-500/25"
+                }`}
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg
+                      className="animate-spin h-5 w-5"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        fill="none"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      />
+                    </svg>
+                    Signing In...
+                  </span>
+                ) : (
+                  "Sign In"
+                )}
+              </motion.button>
+
+              {/* Divider */}
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-4 bg-white text-gray-500">
+                    Or continue with
+                  </span>
+                </div>
+              </div>
+
+              {/* Google Login Button */}
+              <motion.button
+                whileHover={{ scale: 1.01, y: -1 }}
+                whileTap={{ scale: 0.99 }}
+                type="button"
+                onClick={handleGoogleLogin}
+                className="w-full flex items-center justify-center gap-3 py-3.5 px-4 border-2 border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-300"
+              >
+                <FaGoogle className="text-red-500 text-lg" />
+                <span className="font-medium text-gray-700">
+                  Continue with Google
+                </span>
+              </motion.button>
+            </form>
+
+            {/* Sign Up Link */}
+            <div className="mt-8 text-center">
+              <p className="text-gray-600">
+                Don't have an account?{" "}
+                <Link
+                  to="/signup"
+                  className="font-semibold text-teal-600 hover:text-teal-700 transition"
+                >
+                  Create Account
+                </Link>
+              </p>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="mt-8 text-center text-sm text-gray-500">
+            <p>
+              By signing in, you agree to our{" "}
+              <Link to="/terms" className="text-teal-600 hover:underline">
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link to="/privacy" className="text-teal-600 hover:underline">
+                Privacy Policy
+              </Link>
+            </p>
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 };

@@ -7,7 +7,6 @@ import {
   FaSignOutAlt,
   FaHome,
   FaSignInAlt,
-  FaUserPlus,
   FaUserMd,
   FaCalendarAlt,
   FaFileMedical,
@@ -22,7 +21,6 @@ import {
   FaBell,
   FaHistory,
   FaShieldAlt,
-  FaUserCog,
   FaChartLine,
   FaHospital,
 } from "react-icons/fa";
@@ -351,22 +349,14 @@ const Navbar = () => {
                 </div>
               </>
             ) : (
-              <>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <Link
                   to="/signin"
-                  className="px-4 py-2 rounded-md text-sm font-medium hover:bg-teal-700 transition duration-300 flex items-center gap-1"
+                  className="px-5 py-2.5 rounded-lg text-sm font-medium bg-white text-teal-600 hover:bg-teal-50 transition duration-300 flex items-center gap-2 shadow-md"
                 >
                   <FaSignInAlt /> Sign In
                 </Link>
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Link
-                    to="/signup"
-                    className="px-4 py-2 rounded-md text-sm font-medium bg-white text-teal-600 hover:bg-teal-50 transition duration-300 flex items-center gap-1 shadow-md"
-                  >
-                    <FaUserPlus /> Sign Up
-                  </Link>
-                </motion.div>
-              </>
+              </motion.div>
             )}
           </div>
 
@@ -459,20 +449,13 @@ const Navbar = () => {
 
               {/* Auth buttons for mobile */}
               {!user ? (
-                <div className="pt-4 space-y-2 border-t border-teal-600 mt-4">
+                <div className="pt-4 border-t border-teal-600 mt-4">
                   <Link
                     to="/signin"
                     onClick={closeMobileMenu}
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-teal-600 hover:bg-teal-500"
+                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-white text-teal-600 hover:bg-teal-50 font-medium shadow-md"
                   >
                     <FaSignInAlt /> Sign In
-                  </Link>
-                  <Link
-                    to="/signup"
-                    onClick={closeMobileMenu}
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-white text-teal-600 hover:bg-teal-50"
-                  >
-                    <FaUserPlus /> Sign Up
                   </Link>
                 </div>
               ) : (
