@@ -1,5 +1,5 @@
 import { useState, useContext } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   FaGoogle,
   FaUser,
@@ -8,7 +8,6 @@ import {
   FaEye,
   FaEyeSlash,
   FaPhone,
-  FaMapMarkerAlt,
   FaHeartbeat,
   FaShieldAlt,
   FaUserMd,
@@ -17,12 +16,13 @@ import {
   FaCheck,
   FaStethoscope,
   FaUserInjured,
+  FaCheckCircle,
+  FaArrowRight,
 } from "react-icons/fa";
-import { MdHealthAndSafety } from "react-icons/md";
+import { MdHealthAndSafety, MdEmail, MdVerified } from "react-icons/md";
 import { useNavigate, Link } from "react-router";
 import { AuthContext } from "../contexts/AuthContext";
 import { ROLES } from "../contexts/AuthProvider";
-import Swal from "sweetalert2";
 
 const SignUp = () => {
   const { createUser, googleSignIn, loading, authError } = useContext(AuthContext);
@@ -44,6 +44,8 @@ const SignUp = () => {
   const [useImageUrl, setUseImageUrl] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [registrationData, setRegistrationData] = useState(null);
 
   const validateForm = () => {
     const newErrors = {};
@@ -137,23 +139,13 @@ const SignUp = () => {
         photoURL: formData.photoURL,
       });
 
-      Swal.fire({
-        position: "top-end",
-        icon: "success",
-        title: "Welcome to MedAI!",
-        text: formData.role === ROLES.DOCTOR
-          ? "Please check your email to verify your account. Your doctor profile will be reviewed by our admin team."
-          : "Your health journey begins now. Please verify your email.",
-        showConfirmButton: false,
-        timer: 3000,
+      // Store registration data and show success modal
+      setRegistrationData({
+        role: formData.role,
+        email: formData.email,
+        firstName: formData.firstName,
       });
-
-      // Redirect based on role
-      if (formData.role === ROLES.DOCTOR) {
-        navigate("/doctor/complete-profile");
-      } else {
-        navigate("/patient/dashboard");
-      }
+      setShowSuccessModal(true);
     } catch (error) {
       console.error("Signup error:", error);
       setErrors({ firebase: error.message });
@@ -162,33 +154,39 @@ const SignUp = () => {
     }
   };
 
+  const handleSuccessModalClose = () => {
+    setShowSuccessModal(false);
+    // Redirect based on role
+    if (registrationData?.role === ROLES.DOCTOR) {
+      navigate("/doctor/complete-profile");
+    } else {
+      navigate("/patient/dashboard");
+    }
+  };
+
   const handleGoogleRegister = async () => {
     setIsSubmitting(true);
     try {
       const result = await googleSignIn(formData.role);
 
-      Swal.fire({
-        position: "top-end",
-        icon: "success",
-        title: "Welcome to MedAI!",
-        text: result.isNewUser
-          ? (formData.role === ROLES.DOCTOR
-            ? "Your doctor profile will be reviewed by our admin team."
-            : "Your health journey begins now!")
-          : "Welcome back!",
-        showConfirmButton: false,
-        timer: 2000,
-      });
-
-      // Redirect based on role
-      if (result.isNewUser && formData.role === ROLES.DOCTOR) {
-        navigate("/doctor/complete-profile");
-      } else if (result.dbUser?.role === ROLES.DOCTOR) {
-        navigate("/doctor/dashboard");
-      } else if (result.dbUser?.role === ROLES.ADMIN) {
-        navigate("/admin/dashboard");
+      if (result.isNewUser) {
+        // Store registration data and show success modal for new users
+        setRegistrationData({
+          role: formData.role,
+          email: result.firebaseUser?.email,
+          firstName: result.firebaseUser?.displayName?.split(" ")[0] || "User",
+          isGoogleSignup: true,
+        });
+        setShowSuccessModal(true);
       } else {
-        navigate("/patient/dashboard");
+        // Existing user - redirect directly
+        if (result.dbUser?.role === ROLES.DOCTOR) {
+          navigate("/doctor/dashboard");
+        } else if (result.dbUser?.role === ROLES.ADMIN) {
+          navigate("/admin/dashboard");
+        } else {
+          navigate("/patient/dashboard");
+        }
       }
     } catch (error) {
       console.error("Google signup error:", error);
@@ -927,6 +925,135 @@ const SignUp = () => {
           </div>
         </motion.div>
       </div>
+
+      {/* Success Modal */}
+      <AnimatePresence>
+        {showSuccessModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={handleSuccessModalClose}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", duration: 0.5 }}
+              className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 relative overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Decorative Background */}
+              <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-br from-teal-500 via-teal-600 to-cyan-600"></div>
+              <div className="absolute top-0 left-0 right-0 h-32 opacity-20">
+                <div className="absolute top-4 left-4 w-20 h-20 bg-white rounded-full opacity-20"></div>
+                <div className="absolute top-8 right-8 w-12 h-12 bg-white rounded-full opacity-20"></div>
+              </div>
+
+              {/* Success Icon */}
+              <div className="relative flex justify-center mb-6">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                  className="w-24 h-24 bg-white rounded-full shadow-xl flex items-center justify-center mt-4"
+                >
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.4, type: "spring", stiffness: 200 }}
+                    className="w-20 h-20 bg-gradient-to-br from-teal-400 to-cyan-500 rounded-full flex items-center justify-center"
+                  >
+                    <FaCheckCircle className="text-white text-4xl" />
+                  </motion.div>
+                </motion.div>
+              </div>
+
+              {/* Content */}
+              <div className="text-center relative z-10 mt-4">
+                <motion.h2
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-2xl font-bold text-gray-800 mb-2"
+                >
+                  Welcome to MedAI!
+                </motion.h2>
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="text-gray-500 mb-6"
+                >
+                  {registrationData?.firstName && `Hi ${registrationData.firstName}, `}
+                  your account has been created successfully!
+                </motion.p>
+
+                {/* Info Cards */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="space-y-3 mb-6"
+                >
+                  {/* Email Verification Card */}
+                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <MdEmail className="text-blue-600 text-xl" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-gray-800 text-sm">Verify Your Email</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        We've sent a verification link to {registrationData?.email}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Doctor Verification Card - Only for doctors */}
+                  {registrationData?.role === ROLES.DOCTOR && (
+                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100 rounded-xl p-4 flex items-start gap-3">
+                      <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <MdVerified className="text-amber-600 text-xl" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-medium text-gray-800 text-sm">Profile Review</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Complete your profile for admin verification
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+
+                {/* CTA Button */}
+                <motion.button
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleSuccessModalClose}
+                  className="w-full py-4 px-6 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-teal-500/25 transition-all duration-300 flex items-center justify-center gap-2"
+                >
+                  {registrationData?.role === ROLES.DOCTOR ? "Complete Your Profile" : "Go to Dashboard"}
+                  <FaArrowRight className="text-sm" />
+                </motion.button>
+
+                {/* Skip/Later Link */}
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.7 }}
+                  className="text-xs text-gray-400 mt-4"
+                >
+                  You can also close this modal to continue
+                </motion.p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
