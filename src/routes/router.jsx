@@ -13,6 +13,7 @@ import DoctorProfile from "../pages/doctor/DoctorProfile";
 
 // Admin pages
 import VerifyDoctors from "../pages/admin/VerifyDoctors";
+import AdminUsers from "../pages/admin/AdminUsers";
 
 // Public pages
 import FindDoctors from "../pages/doctors/FindDoctors";
@@ -48,6 +49,10 @@ const router = createBrowserRouter([
       {
         path: "/admin/verify-doctors",
         Component: VerifyDoctors,
+      },
+      {
+        path: "/admin/users",
+        Component: AdminUsers,
       },
       // Patient routes
       {
