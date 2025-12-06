@@ -8,6 +8,7 @@ import SignUp from "../components/SignUp";
 // Dashboard imports
 import AdminDashboard from "../pages/admin/AdminDashboard";
 import PatientDashboard from "../pages/patient/PatientDashboard";
+import PatientProfile from "../pages/patient/PatientProfile";
 import DoctorDashboard from "../pages/doctor/DoctorDashboard";
 import DoctorProfile from "../pages/doctor/DoctorProfile";
 
@@ -17,6 +18,7 @@ import AdminUsers from "../pages/admin/AdminUsers";
 
 // Public pages
 import FindDoctors from "../pages/doctors/FindDoctors";
+import DoctorPublicProfile from "../pages/doctors/DoctorPublicProfile";
 
 const router = createBrowserRouter([
   {
@@ -41,6 +43,10 @@ const router = createBrowserRouter([
         path: "/doctors",
         Component: FindDoctors,
       },
+      {
+        path: "/doctors/:id",
+        Component: DoctorPublicProfile,
+      },
       // Admin routes
       {
         path: "/admin/dashboard",
@@ -58,6 +64,14 @@ const router = createBrowserRouter([
       {
         path: "/patient/dashboard",
         Component: PatientDashboard,
+      },
+      {
+        path: "/patient/profile",
+        Component: PatientProfile,
+      },
+      {
+        path: "/patient/:id",
+        Component: PatientProfile,
       },
       // Doctor routes
       {
