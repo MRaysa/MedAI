@@ -178,8 +178,8 @@ const DoctorAppointments = () => {
   }, {});
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -262,9 +262,9 @@ const DoctorAppointments = () => {
           transition={{ delay: 0.1 }}
           className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6"
         >
-          <div className="flex flex-col md:flex-row md:items-center gap-4">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-4">
             {/* Status Filter Tabs */}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0">
               {[
                 { id: "all", label: "All", icon: FaCalendarAlt },
                 { id: "upcoming", label: "Upcoming", icon: MdUpcoming },
@@ -276,7 +276,7 @@ const DoctorAppointments = () => {
                 <button
                   key={filter.id}
                   onClick={() => setActiveFilter(filter.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition whitespace-nowrap flex-shrink-0 ${
                     activeFilter === filter.id
                       ? "bg-teal-500 text-white shadow-lg shadow-teal-500/25"
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
