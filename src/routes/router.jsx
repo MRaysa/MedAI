@@ -24,6 +24,7 @@ import MyDoctors from "../pages/doctors/MyDoctors";
 // Appointment pages
 import BookAppointment from "../pages/appointments/BookAppointment";
 import AppointmentHistory from "../pages/appointments/AppointmentHistory";
+import Teleconsult from "../pages/appointments/Teleconsult";
 import DoctorAppointments from "../pages/doctor/DoctorAppointments";
 import PatientAppointments from "../pages/patient/PatientAppointments";
 import DoctorSchedule from "../pages/doctor/DoctorSchedule";
@@ -119,6 +120,10 @@ const router = createBrowserRouter([
       {
         path: "/appointments/history",
         Component: AppointmentHistory,
+      },
+      {
+        path: "/appointments/teleconsult",
+        Component: Teleconsult,
       },
     ],
   },
