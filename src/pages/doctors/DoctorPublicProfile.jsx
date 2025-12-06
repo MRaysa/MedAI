@@ -288,17 +288,17 @@ const DoctorPublicProfile = () => {
               </div>
 
               {/* Info */}
-              <div className="flex-1 pt-4 md:pt-0">
-                <div className="flex flex-wrap items-center gap-3 mb-2">
+              <div className="flex-1 pt-4 md:pt-0 md:pb-2">
+                <div className="flex flex-wrap items-center gap-3 mb-3">
                   <h1 className="text-3xl font-bold text-gray-900">
                     Dr. {doctor.user?.firstName} {doctor.user?.lastName}
                   </h1>
-                  <BsPatchCheckFill className="text-teal-500 text-2xl" />
+                  <BsPatchCheckFill className="text-teal-500 text-2xl flex-shrink-0" />
                 </div>
 
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="text-2xl">{specializationIcons[doctor.specialization] || "🏥"}</span>
-                  <span className="text-xl font-semibold text-teal-600">{doctor.specialization}</span>
+                <div className="flex items-center gap-2 mb-4">
+                  <RiStethoscopeLine className="text-teal-500 text-xl flex-shrink-0" />
+                  <span className="mt-6 text-xl font-semibold text-teal-600">{doctor.specialization}</span>
                 </div>
 
                 <div className="flex flex-wrap gap-3">
@@ -310,11 +310,11 @@ const DoctorPublicProfile = () => {
 
                   {/* Rating */}
                   <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-xl">
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-0.5">
                       {renderStars(doctor.ratings?.average || 0, "text-lg")}
                     </div>
                     <span className="font-bold text-gray-900">{(doctor.ratings?.average || 0).toFixed(1)}</span>
-                    <span className="text-gray-500">({doctor.ratings?.count || 0} reviews)</span>
+                    <span className="text-gray-500 text-sm">({doctor.ratings?.count || 0} reviews)</span>
                   </div>
 
                   {/* Accepts Patients */}
