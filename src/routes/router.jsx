@@ -20,6 +20,7 @@ import AdminUsers from "../pages/admin/AdminUsers";
 import FindDoctors from "../pages/doctors/FindDoctors";
 import DoctorPublicProfile from "../pages/doctors/DoctorPublicProfile";
 import MyDoctors from "../pages/doctors/MyDoctors";
+import DoctorsBySpecialization from "../pages/doctors/DoctorsBySpecialization";
 
 // Appointment pages
 import BookAppointment from "../pages/appointments/BookAppointment";
@@ -56,6 +57,10 @@ const router = createBrowserRouter([
       {
         path: "/doctors/my-doctors",
         Component: MyDoctors,
+      },
+      {
+        path: "/doctors/specializations",
+        Component: DoctorsBySpecialization,
       },
       {
         path: "/doctors/:id",
