@@ -28,7 +28,7 @@ import {
 import { BsCalendar3 } from "react-icons/bs";
 
 const PatientAppointments = () => {
-  const { user } = useContext(AuthContext);
+  const { user, apiCall } = useContext(AuthContext);
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -37,8 +37,6 @@ const PatientAppointments = () => {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [cancellingId, setCancellingId] = useState(null);
-
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
   // Fetch appointments
   useEffect(() => {
@@ -50,7 +48,7 @@ const PatientAppointments = () => {
 
     try {
       setLoading(true);
-      const token = await user.getIdToken();
+      setError(null);
 
       const params = new URLSearchParams();
       if (activeFilter === "upcoming") {
@@ -59,24 +57,16 @@ const PatientAppointments = () => {
         params.append("status", activeFilter);
       }
 
-      const response = await fetch(
-        `${API_URL}/appointments/my-appointments?${params.toString()}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await apiCall(`/appointments/my-appointments?${params.toString()}`);
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch appointments");
+      if (response.success) {
+        setAppointments(response.data || []);
+      } else {
+        throw new Error(response.message || "Failed to fetch appointments");
       }
-
-      const data = await response.json();
-      setAppointments(data.data || []);
     } catch (err) {
       console.error("Error fetching appointments:", err);
-      setError(err.message);
+      setError(err.message || "Failed to fetch appointments");
     } finally {
       setLoading(false);
     }
@@ -90,32 +80,24 @@ const PatientAppointments = () => {
 
     try {
       setCancellingId(appointmentId);
-      const token = await user.getIdToken();
 
-      const response = await fetch(
-        `${API_URL}/appointments/${appointmentId}/status`,
-        {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            status: "cancelled",
-            reason: "Cancelled by patient",
-          }),
-        }
-      );
+      const response = await apiCall(`/appointments/${appointmentId}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          status: "cancelled",
+          reason: "Cancelled by patient",
+        }),
+      });
 
-      if (!response.ok) {
-        throw new Error("Failed to cancel appointment");
+      if (!response.success) {
+        throw new Error(response.message || "Failed to cancel appointment");
       }
 
       fetchAppointments();
       setShowDetailModal(false);
     } catch (err) {
       console.error("Error cancelling appointment:", err);
-      alert("Failed to cancel appointment");
+      alert(err.message || "Failed to cancel appointment");
     } finally {
       setCancellingId(null);
     }
