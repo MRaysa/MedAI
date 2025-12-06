@@ -31,6 +31,11 @@ import PatientAppointments from "../pages/patient/PatientAppointments";
 import DoctorSchedule from "../pages/doctor/DoctorSchedule";
 import DoctorPatients from "../pages/doctor/DoctorPatients";
 
+// Diagnostics pages
+import LabTests from "../pages/diagnostics/LabTests";
+import DiagnosticResults from "../pages/diagnostics/DiagnosticResults";
+import Imaging from "../pages/diagnostics/Imaging";
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -129,6 +134,19 @@ const router = createBrowserRouter([
       {
         path: "/appointments/teleconsult",
         Component: Teleconsult,
+      },
+      // Diagnostics routes
+      {
+        path: "/diagnostics/lab-tests",
+        Component: LabTests,
+      },
+      {
+        path: "/diagnostics/results",
+        Component: DiagnosticResults,
+      },
+      {
+        path: "/diagnostics/imaging",
+        Component: Imaging,
       },
     ],
   },
