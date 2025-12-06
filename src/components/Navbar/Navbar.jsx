@@ -80,11 +80,24 @@ const Navbar = () => {
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
+  // Get dashboard path based on role
+  const getDashboardPath = () => {
+    switch (dbUser?.role) {
+      case "admin":
+        return "/admin/dashboard";
+      case "doctor":
+        return "/doctor/dashboard";
+      case "patient":
+      default:
+        return "/patient/dashboard";
+    }
+  };
+
   // Navigation structure based on healthcare system modules
   const navigationItems = [
     {
       name: "Dashboard",
-      path: "/dashboard",
+      path: getDashboardPath(),
       icon: MdDashboard,
       requiresAuth: true,
     },
