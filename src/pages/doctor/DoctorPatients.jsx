@@ -3,13 +3,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router";
 import { AuthContext } from "../../contexts/AuthContext";
 import {
-  FaUser,
   FaUserMd,
   FaSearch,
   FaPhone,
   FaEnvelope,
   FaCalendarAlt,
-  FaCalendarCheck,
   FaHistory,
   FaAllergies,
   FaHeartbeat,
@@ -21,12 +19,11 @@ import {
   FaTimes,
   FaVideo,
   FaComments,
-  FaFileMedical,
   FaCheckCircle,
   FaTimesCircle,
   FaHourglassHalf,
-  FaClock,
   FaEye,
+  FaExternalLinkAlt,
 } from "react-icons/fa";
 import { MdLocalHospital, MdPersonSearch, MdUpcoming } from "react-icons/md";
 import { BsClockHistory, BsPersonBadge } from "react-icons/bs";
@@ -39,6 +36,7 @@ const DoctorPatients = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [initialTab, setInitialTab] = useState("info");
   const [sortBy, setSortBy] = useState("recent");
   const [filterBy, setFilterBy] = useState("all"); // all, upcoming, no-upcoming
 
@@ -457,6 +455,7 @@ const DoctorPatients = () => {
                   <div className="flex gap-3">
                     <button
                       onClick={() => {
+                        setInitialTab("info");
                         setSelectedPatient(patient);
                         setShowDetailModal(true);
                       }}
@@ -465,13 +464,17 @@ const DoctorPatients = () => {
                       <FaEye />
                       View Details
                     </button>
-                    <Link
-                      to={`/appointments/book?patient=${patient.patientId}`}
+                    <button
+                      onClick={() => {
+                        setInitialTab("history");
+                        setSelectedPatient(patient);
+                        setShowDetailModal(true);
+                      }}
                       className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-500 text-white rounded-xl hover:bg-teal-600 transition font-medium"
                     >
-                      <FaCalendarCheck />
-                      New Appointment
-                    </Link>
+                      <FaHistory />
+                      Appointment History
+                    </button>
                   </div>
                 </div>
               </motion.div>
@@ -485,6 +488,7 @@ const DoctorPatients = () => {
             <PatientDetailModal
               patient={selectedPatient}
               apiCall={apiCall}
+              initialTab={initialTab}
               onClose={() => {
                 setShowDetailModal(false);
                 setSelectedPatient(null);
@@ -507,6 +511,7 @@ const DoctorPatients = () => {
 const PatientDetailModal = ({
   patient,
   apiCall,
+  initialTab = "info",
   onClose,
   formatDate,
   formatDateTime,
@@ -515,9 +520,13 @@ const PatientDetailModal = ({
   getStatusConfig,
   getConsultationIcon
 }) => {
-  const [activeTab, setActiveTab] = useState("info");
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [appointmentHistory, setAppointmentHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   useEffect(() => {
     if (activeTab === "history") {
@@ -834,7 +843,7 @@ const PatientDetailModal = ({
                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${status.bg}`}>
                               <StatusIcon className={status.text} />
                             </div>
-                            <div>
+                            <div className="flex-1">
                               <p className="font-semibold text-gray-900">
                                 {formatDateTime(apt.appointmentDate, apt.appointmentTime)}
                               </p>
@@ -856,9 +865,18 @@ const PatientDetailModal = ({
                               )}
                             </div>
                           </div>
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${status.bg} ${status.text}`}>
-                            {status.label}
-                          </span>
+                          <div className="flex flex-col items-end gap-2">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${status.bg} ${status.text}`}>
+                              {status.label}
+                            </span>
+                            <Link
+                              to={`/doctor/appointments?id=${apt._id}`}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-600 bg-teal-50 hover:bg-teal-100 rounded-lg transition"
+                            >
+                              <FaEye className="text-xs" />
+                              View
+                            </Link>
+                          </div>
                         </div>
                       </div>
                     );
@@ -871,21 +889,12 @@ const PatientDetailModal = ({
 
         {/* Footer */}
         <div className="bg-white border-t border-gray-100 p-4">
-          <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition font-medium"
-            >
-              Close
-            </button>
-            <Link
-              to={`/appointments/book?patient=${patient.patientId}`}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-500 text-white rounded-xl hover:bg-teal-600 transition font-medium"
-            >
-              <FaCalendarCheck />
-              New Appointment
-            </Link>
-          </div>
+          <button
+            onClick={onClose}
+            className="w-full px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition font-medium"
+          >
+            Close
+          </button>
         </div>
       </motion.div>
     </motion.div>
