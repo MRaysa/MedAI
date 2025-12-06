@@ -158,7 +158,14 @@ const SignUp = () => {
     setShowSuccessModal(false);
     // Redirect based on role
     if (registrationData?.role === ROLES.DOCTOR) {
-      navigate("/doctor/complete-profile");
+      // New doctors go to complete profile, returning doctors go to dashboard
+      if (registrationData?.isNewUser !== false) {
+        navigate("/doctor/complete-profile");
+      } else {
+        navigate("/doctor/dashboard");
+      }
+    } else if (registrationData?.role === ROLES.ADMIN) {
+      navigate("/admin/dashboard");
     } else {
       navigate("/patient/dashboard");
     }
@@ -169,25 +176,15 @@ const SignUp = () => {
     try {
       const result = await googleSignIn(formData.role);
 
-      if (result.isNewUser) {
-        // Store registration data and show success modal for new users
-        setRegistrationData({
-          role: formData.role,
-          email: result.firebaseUser?.email,
-          firstName: result.firebaseUser?.displayName?.split(" ")[0] || "User",
-          isGoogleSignup: true,
-        });
-        setShowSuccessModal(true);
-      } else {
-        // Existing user - redirect directly
-        if (result.dbUser?.role === ROLES.DOCTOR) {
-          navigate("/doctor/dashboard");
-        } else if (result.dbUser?.role === ROLES.ADMIN) {
-          navigate("/admin/dashboard");
-        } else {
-          navigate("/patient/dashboard");
-        }
-      }
+      // Store registration data and show success modal
+      setRegistrationData({
+        role: result.dbUser?.role || formData.role,
+        email: result.firebaseUser?.email,
+        firstName: result.firebaseUser?.displayName?.split(" ")[0] || "User",
+        isGoogleSignup: true,
+        isNewUser: result.isNewUser,
+      });
+      setShowSuccessModal(true);
     } catch (error) {
       console.error("Google signup error:", error);
       setErrors({ firebase: error.message });
@@ -987,7 +984,9 @@ const SignUp = () => {
                   className="text-gray-500 mb-6"
                 >
                   {registrationData?.firstName && `Hi ${registrationData.firstName}, `}
-                  your account has been created successfully!
+                  {registrationData?.isNewUser === false
+                    ? "welcome back! You're now signed in."
+                    : "your account has been created successfully!"}
                 </motion.p>
 
                 {/* Info Cards */}
@@ -997,21 +996,38 @@ const SignUp = () => {
                   transition={{ delay: 0.5 }}
                   className="space-y-3 mb-6"
                 >
-                  {/* Email Verification Card */}
-                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <MdEmail className="text-blue-600 text-xl" />
+                  {/* Email Verification Card - Only for new users with email signup */}
+                  {registrationData?.isNewUser !== false && !registrationData?.isGoogleSignup && (
+                    <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3">
+                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <MdEmail className="text-blue-600 text-xl" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-medium text-gray-800 text-sm">Verify Your Email</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          We've sent a verification link to {registrationData?.email}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-left">
-                      <p className="font-medium text-gray-800 text-sm">Verify Your Email</p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        We've sent a verification link to {registrationData?.email}
-                      </p>
-                    </div>
-                  </div>
+                  )}
 
-                  {/* Doctor Verification Card - Only for doctors */}
-                  {registrationData?.role === ROLES.DOCTOR && (
+                  {/* Google Account Connected - For Google signups */}
+                  {registrationData?.isGoogleSignup && (
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 rounded-xl p-4 flex items-start gap-3">
+                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <FaGoogle className="text-green-600 text-lg" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-medium text-gray-800 text-sm">Google Account Connected</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Signed in as {registrationData?.email}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Doctor Verification Card - Only for new doctors */}
+                  {registrationData?.role === ROLES.DOCTOR && registrationData?.isNewUser !== false && (
                     <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100 rounded-xl p-4 flex items-start gap-3">
                       <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
                         <MdVerified className="text-amber-600 text-xl" />
@@ -1036,7 +1052,9 @@ const SignUp = () => {
                   onClick={handleSuccessModalClose}
                   className="w-full py-4 px-6 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-teal-500/25 transition-all duration-300 flex items-center justify-center gap-2"
                 >
-                  {registrationData?.role === ROLES.DOCTOR ? "Complete Your Profile" : "Go to Dashboard"}
+                  {registrationData?.role === ROLES.DOCTOR && registrationData?.isNewUser !== false
+                    ? "Complete Your Profile"
+                    : "Go to Dashboard"}
                   <FaArrowRight className="text-sm" />
                 </motion.button>
 

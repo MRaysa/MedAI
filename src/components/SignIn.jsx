@@ -1,6 +1,5 @@
 import React, { useState, useRef, useContext } from "react";
-import { motion } from "framer-motion";
-import Swal from "sweetalert2";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   FaGoogle,
   FaEnvelope,
@@ -11,8 +10,13 @@ import {
   FaShieldAlt,
   FaUserMd,
   FaBrain,
+  FaCheckCircle,
+  FaArrowRight,
+  FaStethoscope,
+  FaUserInjured,
+  FaUserShield,
 } from "react-icons/fa";
-import { MdHealthAndSafety } from "react-icons/md";
+import { MdHealthAndSafety, MdEmail } from "react-icons/md";
 import { useNavigate, useLocation, Link } from "react-router";
 import { AuthContext } from "../contexts/AuthContext";
 import { ROLES, DOCTOR_VERIFICATION_STATUS } from "../contexts/AuthProvider";
@@ -32,6 +36,8 @@ const SignIn = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [loginData, setLoginData] = useState(null);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -68,17 +74,15 @@ const SignIn = () => {
     try {
       const result = await signInUser(email, password);
 
-      await Swal.fire({
-        position: "top-end",
-        icon: "success",
-        title: `Welcome back${result.dbUser?.firstName ? `, ${result.dbUser.firstName}` : ""}!`,
-        text: getRoleWelcomeMessage(result.dbUser?.role),
-        showConfirmButton: false,
-        timer: 2000,
+      // Store login data and show success modal
+      setLoginData({
+        firstName: result.dbUser?.firstName,
+        role: result.dbUser?.role,
+        email: result.dbUser?.email,
+        redirectPath: getRedirectPath(result.dbUser, result.profile),
+        isGoogleLogin: false,
       });
-
-      const redirectPath = getRedirectPath(result.dbUser, result.profile);
-      navigate(redirectPath);
+      setShowSuccessModal(true);
     } catch (error) {
       console.error("Sign-in error:", error);
 
@@ -106,28 +110,16 @@ const SignIn = () => {
     try {
       const result = await googleSignIn();
 
-      if (result.isNewUser) {
-        await Swal.fire({
-          position: "top-end",
-          icon: "success",
-          title: "Welcome to MedAI!",
-          text: "Your account has been created successfully.",
-          showConfirmButton: false,
-          timer: 2000,
-        });
-      } else {
-        await Swal.fire({
-          position: "top-end",
-          icon: "success",
-          title: `Welcome back${result.dbUser?.firstName ? `, ${result.dbUser.firstName}` : ""}!`,
-          text: getRoleWelcomeMessage(result.dbUser?.role),
-          showConfirmButton: false,
-          timer: 2000,
-        });
-      }
-
-      const redirectPath = getRedirectPath(result.dbUser, result.profile);
-      navigate(redirectPath);
+      // Store login data and show success modal
+      setLoginData({
+        firstName: result.dbUser?.firstName || result.firebaseUser?.displayName?.split(" ")[0],
+        role: result.dbUser?.role,
+        email: result.dbUser?.email || result.firebaseUser?.email,
+        redirectPath: getRedirectPath(result.dbUser, result.profile),
+        isGoogleLogin: true,
+        isNewUser: result.isNewUser,
+      });
+      setShowSuccessModal(true);
     } catch (error) {
       console.error("Google sign-in error:", error);
       setError(error.message);
@@ -135,6 +127,14 @@ const SignIn = () => {
       setLoading(false);
     }
   };
+
+  const handleSuccessModalClose = () => {
+    setShowSuccessModal(false);
+    navigate(loginData?.redirectPath || "/");
+  };
+
+  const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
+  const [passwordResetEmail, setPasswordResetEmail] = useState("");
 
   const handleForgetPassword = async () => {
     const emailValue = emailRef.current?.value;
@@ -147,11 +147,8 @@ const SignIn = () => {
 
     try {
       await resetPassword(emailValue);
-      await Swal.fire({
-        icon: "success",
-        title: "Password Reset Email Sent",
-        text: "Please check your inbox for the password reset link.",
-      });
+      setPasswordResetEmail(emailValue);
+      setShowPasswordResetModal(true);
     } catch (error) {
       let errorMessage = error.message;
       if (error.message.includes("user-not-found")) {
@@ -483,6 +480,257 @@ const SignIn = () => {
           </div>
         </motion.div>
       </div>
+
+      {/* Login Success Modal */}
+      <AnimatePresence>
+        {showSuccessModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={handleSuccessModalClose}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", duration: 0.5 }}
+              className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 relative overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Decorative Background */}
+              <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-br from-teal-500 via-teal-600 to-cyan-600"></div>
+              <div className="absolute top-0 left-0 right-0 h-32 opacity-20">
+                <div className="absolute top-4 left-4 w-20 h-20 bg-white rounded-full opacity-20"></div>
+                <div className="absolute top-8 right-8 w-12 h-12 bg-white rounded-full opacity-20"></div>
+              </div>
+
+              {/* Success Icon */}
+              <div className="relative flex justify-center mb-6">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                  className="w-24 h-24 bg-white rounded-full shadow-xl flex items-center justify-center mt-4"
+                >
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.4, type: "spring", stiffness: 200 }}
+                    className="w-20 h-20 bg-gradient-to-br from-teal-400 to-cyan-500 rounded-full flex items-center justify-center"
+                  >
+                    <FaCheckCircle className="text-white text-4xl" />
+                  </motion.div>
+                </motion.div>
+              </div>
+
+              {/* Content */}
+              <div className="text-center relative z-10 mt-4">
+                <motion.h2
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-2xl font-bold text-gray-800 mb-2"
+                >
+                  {loginData?.isNewUser ? "Welcome to MedAI!" : `Welcome back${loginData?.firstName ? `, ${loginData.firstName}` : ""}!`}
+                </motion.h2>
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="text-gray-500 mb-6"
+                >
+                  {getRoleWelcomeMessage(loginData?.role)}
+                </motion.p>
+
+                {/* Role Info Card */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="space-y-3 mb-6"
+                >
+                  <div className={`bg-gradient-to-r ${
+                    loginData?.role === ROLES.ADMIN
+                      ? "from-purple-50 to-indigo-50 border-purple-100"
+                      : loginData?.role === ROLES.DOCTOR
+                      ? "from-teal-50 to-emerald-50 border-teal-100"
+                      : "from-blue-50 to-cyan-50 border-blue-100"
+                  } border rounded-xl p-4 flex items-start gap-3`}>
+                    <div className={`w-10 h-10 ${
+                      loginData?.role === ROLES.ADMIN
+                        ? "bg-purple-100"
+                        : loginData?.role === ROLES.DOCTOR
+                        ? "bg-teal-100"
+                        : "bg-blue-100"
+                    } rounded-full flex items-center justify-center flex-shrink-0`}>
+                      {loginData?.role === ROLES.ADMIN ? (
+                        <FaUserShield className="text-purple-600 text-xl" />
+                      ) : loginData?.role === ROLES.DOCTOR ? (
+                        <FaStethoscope className="text-teal-600 text-xl" />
+                      ) : (
+                        <FaUserInjured className="text-blue-600 text-xl" />
+                      )}
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-gray-800 text-sm">
+                        {loginData?.role === ROLES.ADMIN
+                          ? "Administrator Access"
+                          : loginData?.role === ROLES.DOCTOR
+                          ? "Doctor Dashboard"
+                          : "Patient Portal"}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Signed in as {loginData?.email}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Google Login Badge */}
+                  {loginData?.isGoogleLogin && (
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 rounded-xl p-4 flex items-start gap-3">
+                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <FaGoogle className="text-green-600 text-lg" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-medium text-gray-800 text-sm">Google Account</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Securely authenticated via Google
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+
+                {/* CTA Button */}
+                <motion.button
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleSuccessModalClose}
+                  className="w-full py-4 px-6 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-teal-500/25 transition-all duration-300 flex items-center justify-center gap-2"
+                >
+                  Go to Dashboard
+                  <FaArrowRight className="text-sm" />
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Password Reset Success Modal */}
+      <AnimatePresence>
+        {showPasswordResetModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowPasswordResetModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", duration: 0.5 }}
+              className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 relative overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Decorative Background */}
+              <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600"></div>
+              <div className="absolute top-0 left-0 right-0 h-32 opacity-20">
+                <div className="absolute top-4 left-4 w-20 h-20 bg-white rounded-full opacity-20"></div>
+                <div className="absolute top-8 right-8 w-12 h-12 bg-white rounded-full opacity-20"></div>
+              </div>
+
+              {/* Success Icon */}
+              <div className="relative flex justify-center mb-6">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                  className="w-24 h-24 bg-white rounded-full shadow-xl flex items-center justify-center mt-4"
+                >
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.4, type: "spring", stiffness: 200 }}
+                    className="w-20 h-20 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center"
+                  >
+                    <MdEmail className="text-white text-4xl" />
+                  </motion.div>
+                </motion.div>
+              </div>
+
+              {/* Content */}
+              <div className="text-center relative z-10 mt-4">
+                <motion.h2
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-2xl font-bold text-gray-800 mb-2"
+                >
+                  Check Your Email
+                </motion.h2>
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="text-gray-500 mb-6"
+                >
+                  We've sent a password reset link to your email address.
+                </motion.p>
+
+                {/* Email Info Card */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="mb-6"
+                >
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <MdEmail className="text-blue-600 text-xl" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-gray-800 text-sm">Password Reset Link Sent</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Check your inbox at {passwordResetEmail}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* CTA Button */}
+                <motion.button
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setShowPasswordResetModal(false)}
+                  className="w-full py-4 px-6 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-blue-500/25 transition-all duration-300"
+                >
+                  Got it
+                </motion.button>
+
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.7 }}
+                  className="text-xs text-gray-400 mt-4"
+                >
+                  Didn't receive the email? Check your spam folder
+                </motion.p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
