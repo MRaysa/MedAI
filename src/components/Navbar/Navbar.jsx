@@ -129,7 +129,7 @@ const Navbar = () => {
       requiresAuth: true,
       children: [
         { name: "Book Appointment", path: "/appointments/book", icon: FaCalendarAlt },
-        { name: "My Appointments", path: "/appointments", icon: FaNotesMedical },
+        { name: "My Appointments", path: dbUser?.role === "doctor" ? "/doctor/appointments" : "/patient/appointments", icon: FaNotesMedical },
         { name: "Teleconsultation", path: "/appointments/teleconsult", icon: FaComments },
         { name: "Appointment History", path: "/appointments/history", icon: FaHistory },
       ],
@@ -346,7 +346,7 @@ const Navbar = () => {
                             {dbUser?.role === "doctor" ? "Doctor Dashboard" : dbUser?.role === "admin" ? "Admin Dashboard" : "Health Dashboard"}
                           </Link>
                           <Link
-                            to="/appointments"
+                            to={dbUser?.role === "doctor" ? "/doctor/appointments" : "/patient/appointments"}
                             onClick={() => setProfileDropdownOpen(false)}
                             className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                           >

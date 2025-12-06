@@ -20,6 +20,11 @@ import AdminUsers from "../pages/admin/AdminUsers";
 import FindDoctors from "../pages/doctors/FindDoctors";
 import DoctorPublicProfile from "../pages/doctors/DoctorPublicProfile";
 
+// Appointment pages
+import BookAppointment from "../pages/appointments/BookAppointment";
+import DoctorAppointments from "../pages/doctor/DoctorAppointments";
+import PatientAppointments from "../pages/patient/PatientAppointments";
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -73,6 +78,10 @@ const router = createBrowserRouter([
         path: "/patient/:id",
         Component: PatientProfile,
       },
+      {
+        path: "/patient/appointments",
+        Component: PatientAppointments,
+      },
       // Doctor routes
       {
         path: "/doctor/dashboard",
@@ -81,6 +90,15 @@ const router = createBrowserRouter([
       {
         path: "/doctor/profile",
         Component: DoctorProfile,
+      },
+      {
+        path: "/doctor/appointments",
+        Component: DoctorAppointments,
+      },
+      // Appointment routes
+      {
+        path: "/appointments/book",
+        Component: BookAppointment,
       },
     ],
   },
