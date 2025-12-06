@@ -301,7 +301,7 @@ const Navbar = () => {
                       </div>
                     )}
                     <span className="text-sm font-medium max-w-[100px] truncate">
-                      {user.displayName || "User"}
+                      {dbUser?.displayName || dbUser?.firstName || user.displayName || "User"}
                     </span>
                     <FaChevronDown
                       className={`text-xs transition-transform ${
@@ -320,9 +320,9 @@ const Navbar = () => {
                       >
                         <div className="px-4 py-3 border-b border-gray-100">
                           <p className="text-sm font-semibold text-gray-800">
-                            {user.displayName || "User"}
+                            {dbUser?.displayName || dbUser?.firstName || user.displayName || "User"}
                           </p>
-                          <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                          <p className="text-xs text-gray-500 truncate">{dbUser?.email || user.email}</p>
                           <span className={`inline-block mt-1 px-2 py-0.5 ${roleDisplay.bgColor} ${roleDisplay.textColor} text-xs rounded-full`}>
                             {roleDisplay.label}
                           </span>
@@ -434,8 +434,8 @@ const Navbar = () => {
                     </div>
                   )}
                   <div>
-                    <p className="text-sm font-medium">{user.displayName || "User"}</p>
-                    <p className="text-xs text-teal-200 truncate max-w-[180px]">{user.email}</p>
+                    <p className="text-sm font-medium">{dbUser?.displayName || dbUser?.firstName || user.displayName || "User"}</p>
+                    <p className="text-xs text-teal-200 truncate max-w-[180px]">{dbUser?.email || user.email}</p>
                   </div>
                 </div>
               )}
