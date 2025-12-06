@@ -25,6 +25,7 @@ import MyDoctors from "../pages/doctors/MyDoctors";
 import BookAppointment from "../pages/appointments/BookAppointment";
 import DoctorAppointments from "../pages/doctor/DoctorAppointments";
 import PatientAppointments from "../pages/patient/PatientAppointments";
+import DoctorSchedule from "../pages/doctor/DoctorSchedule";
 
 const router = createBrowserRouter([
   {
@@ -99,6 +100,10 @@ const router = createBrowserRouter([
       {
         path: "/doctor/appointments",
         Component: DoctorAppointments,
+      },
+      {
+        path: "/doctor/schedule",
+        Component: DoctorSchedule,
       },
       // Appointment routes
       {
