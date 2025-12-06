@@ -28,12 +28,28 @@ import { FiMenu, FiX } from "react-icons/fi";
 import { MdHealthAndSafety, MdDashboard } from "react-icons/md";
 
 const Navbar = () => {
-  const { user, signOutUser } = useContext(AuthContext);
+  const { user, dbUser, signOutUser } = useContext(AuthContext);
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = React.useState(false);
   const [activeDropdown, setActiveDropdown] = React.useState(null);
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
+
+  // Get role display info
+  const getRoleDisplay = () => {
+    const role = dbUser?.role;
+    switch (role) {
+      case "admin":
+        return { label: "Admin", bgColor: "bg-purple-100", textColor: "text-purple-700" };
+      case "doctor":
+        return { label: "Doctor", bgColor: "bg-teal-100", textColor: "text-teal-700" };
+      case "patient":
+      default:
+        return { label: "Patient", bgColor: "bg-blue-100", textColor: "text-blue-700" };
+    }
+  };
+
+  const roleDisplay = getRoleDisplay();
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -294,14 +310,14 @@ const Navbar = () => {
                             {user.displayName || "User"}
                           </p>
                           <p className="text-xs text-gray-500 truncate">{user.email}</p>
-                          <span className="inline-block mt-1 px-2 py-0.5 bg-teal-100 text-teal-700 text-xs rounded-full">
-                            Patient
+                          <span className={`inline-block mt-1 px-2 py-0.5 ${roleDisplay.bgColor} ${roleDisplay.textColor} text-xs rounded-full`}>
+                            {roleDisplay.label}
                           </span>
                         </div>
 
                         <div className="py-1">
                           <Link
-                            to="/patient/profile"
+                            to={dbUser?.role === "doctor" ? "/doctor/profile" : dbUser?.role === "admin" ? "/admin/profile" : "/patient/profile"}
                             onClick={() => setProfileDropdownOpen(false)}
                             className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                           >
@@ -309,12 +325,12 @@ const Navbar = () => {
                             My Profile
                           </Link>
                           <Link
-                            to="/patient/metrics"
+                            to={dbUser?.role === "doctor" ? "/doctor/dashboard" : dbUser?.role === "admin" ? "/admin/dashboard" : "/patient/metrics"}
                             onClick={() => setProfileDropdownOpen(false)}
                             className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                           >
                             <FaHeartbeat className="text-teal-600" />
-                            Health Dashboard
+                            {dbUser?.role === "doctor" ? "Doctor Dashboard" : dbUser?.role === "admin" ? "Admin Dashboard" : "Health Dashboard"}
                           </Link>
                           <Link
                             to="/appointments"

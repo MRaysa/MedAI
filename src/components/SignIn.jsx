@@ -26,6 +26,8 @@ const SignIn = () => {
     signInUser,
     googleSignIn,
     resetPassword,
+    apiCall,
+    fetchCurrentUser,
     loading: authLoading,
     authError,
   } = useContext(AuthContext);
@@ -38,6 +40,9 @@ const SignIn = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [loginData, setLoginData] = useState(null);
+  const [showRoleSelectionModal, setShowRoleSelectionModal] = useState(false);
+  const [selectedRole, setSelectedRole] = useState(ROLES.PATIENT);
+  const [pendingGoogleUser, setPendingGoogleUser] = useState(null);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -108,23 +113,83 @@ const SignIn = () => {
     setError("");
 
     try {
+      // First, try to sign in with Google to get user info
       const result = await googleSignIn();
 
-      // Store login data and show success modal
-      setLoginData({
-        firstName: result.dbUser?.firstName || result.firebaseUser?.displayName?.split(" ")[0],
-        role: result.dbUser?.role,
-        email: result.dbUser?.email || result.firebaseUser?.email,
-        redirectPath: getRedirectPath(result.dbUser, result.profile),
-        isGoogleLogin: true,
-        isNewUser: result.isNewUser,
-      });
-      setShowSuccessModal(true);
+      if (result.isNewUser) {
+        // New user - show role selection modal
+        setPendingGoogleUser({
+          firebaseUser: result.firebaseUser,
+          dbUser: result.dbUser,
+        });
+        setShowRoleSelectionModal(true);
+      } else {
+        // Existing user - show success modal and redirect
+        setLoginData({
+          firstName: result.dbUser?.firstName || result.firebaseUser?.displayName?.split(" ")[0],
+          role: result.dbUser?.role,
+          email: result.dbUser?.email || result.firebaseUser?.email,
+          redirectPath: getRedirectPath(result.dbUser, result.profile),
+          isGoogleLogin: true,
+          isNewUser: false,
+        });
+        setShowSuccessModal(true);
+      }
     } catch (error) {
       console.error("Google sign-in error:", error);
       setError(error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle role selection for new Google users
+  const handleRoleSelection = async () => {
+    if (!pendingGoogleUser) return;
+
+    setLoading(true);
+    setShowRoleSelectionModal(false);
+
+    try {
+      // Update the user's role in the database if they selected doctor
+      if (selectedRole === ROLES.DOCTOR && pendingGoogleUser.dbUser?.role !== ROLES.DOCTOR) {
+        await apiCall("/auth/update-role", {
+          method: "PUT",
+          body: JSON.stringify({ role: selectedRole }),
+        });
+        // Refresh user context to update the navbar and other components
+        await fetchCurrentUser();
+      }
+
+      const redirectPath = selectedRole === ROLES.DOCTOR
+        ? "/doctor/complete-profile"
+        : "/patient/dashboard";
+
+      setLoginData({
+        firstName: pendingGoogleUser.firebaseUser?.displayName?.split(" ")[0] || "User",
+        role: selectedRole,
+        email: pendingGoogleUser.firebaseUser?.email,
+        redirectPath: redirectPath,
+        isGoogleLogin: true,
+        isNewUser: true,
+      });
+      setShowSuccessModal(true);
+    } catch (error) {
+      console.error("Role selection error:", error);
+      setError(error.message);
+      // Still show success modal but with default patient role
+      setLoginData({
+        firstName: pendingGoogleUser.firebaseUser?.displayName?.split(" ")[0] || "User",
+        role: ROLES.PATIENT,
+        email: pendingGoogleUser.firebaseUser?.email,
+        redirectPath: "/patient/dashboard",
+        isGoogleLogin: true,
+        isNewUser: true,
+      });
+      setShowSuccessModal(true);
+    } finally {
+      setLoading(false);
+      setPendingGoogleUser(null);
     }
   };
 
@@ -480,6 +545,203 @@ const SignIn = () => {
           </div>
         </motion.div>
       </div>
+
+      {/* Role Selection Modal for New Google Users */}
+      <AnimatePresence>
+        {showRoleSelectionModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", duration: 0.5 }}
+              className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 relative overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Decorative Background */}
+              <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-br from-teal-500 via-teal-600 to-cyan-600"></div>
+              <div className="absolute top-0 left-0 right-0 h-32 opacity-20">
+                <div className="absolute top-4 left-4 w-20 h-20 bg-white rounded-full opacity-20"></div>
+                <div className="absolute top-8 right-8 w-12 h-12 bg-white rounded-full opacity-20"></div>
+              </div>
+
+              {/* Google Icon */}
+              <div className="relative flex justify-center mb-6">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                  className="w-24 h-24 bg-white rounded-full shadow-xl flex items-center justify-center mt-4"
+                >
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.4, type: "spring", stiffness: 200 }}
+                    className="w-20 h-20 bg-gradient-to-br from-red-400 to-orange-500 rounded-full flex items-center justify-center"
+                  >
+                    <FaGoogle className="text-white text-3xl" />
+                  </motion.div>
+                </motion.div>
+              </div>
+
+              {/* Content */}
+              <div className="text-center relative z-10 mt-4">
+                <motion.h2
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-2xl font-bold text-gray-800 mb-2"
+                >
+                  Welcome to MedAI!
+                </motion.h2>
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="text-gray-500 mb-6"
+                >
+                  Hi {pendingGoogleUser?.firebaseUser?.displayName?.split(" ")[0] || "there"}! Choose how you'd like to use MedAI.
+                </motion.p>
+
+                {/* Role Selection Cards */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="space-y-3 mb-6"
+                >
+                  {/* Patient Option */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRole(ROLES.PATIENT)}
+                    className={`w-full p-4 rounded-xl border-2 transition-all duration-300 text-left ${
+                      selectedRole === ROLES.PATIENT
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div
+                        className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                          selectedRole === ROLES.PATIENT
+                            ? "bg-gradient-to-r from-blue-500 to-cyan-500"
+                            : "bg-gray-100"
+                        }`}
+                      >
+                        <FaUserInjured
+                          className={`text-xl ${
+                            selectedRole === ROLES.PATIENT ? "text-white" : "text-gray-500"
+                          }`}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className={`font-semibold ${selectedRole === ROLES.PATIENT ? "text-gray-800" : "text-gray-700"}`}>
+                          Patient
+                        </h4>
+                        <p className="text-sm text-gray-500">Track health, book appointments, access records</p>
+                      </div>
+                      {selectedRole === ROLES.PATIENT && (
+                        <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center">
+                          <FaCheckCircle className="text-white text-xs" />
+                        </div>
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Doctor Option */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRole(ROLES.DOCTOR)}
+                    className={`w-full p-4 rounded-xl border-2 transition-all duration-300 text-left ${
+                      selectedRole === ROLES.DOCTOR
+                        ? "border-teal-500 bg-teal-50"
+                        : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div
+                        className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                          selectedRole === ROLES.DOCTOR
+                            ? "bg-gradient-to-r from-teal-500 to-emerald-500"
+                            : "bg-gray-100"
+                        }`}
+                      >
+                        <FaStethoscope
+                          className={`text-xl ${
+                            selectedRole === ROLES.DOCTOR ? "text-white" : "text-gray-500"
+                          }`}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className={`font-semibold ${selectedRole === ROLES.DOCTOR ? "text-gray-800" : "text-gray-700"}`}>
+                          Doctor
+                        </h4>
+                        <p className="text-sm text-gray-500">Manage patients, appointments, consultations</p>
+                      </div>
+                      {selectedRole === ROLES.DOCTOR && (
+                        <div className="w-6 h-6 bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full flex items-center justify-center">
+                          <FaCheckCircle className="text-white text-xs" />
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                </motion.div>
+
+                {/* Doctor Verification Notice */}
+                {selectedRole === ROLES.DOCTOR && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-left"
+                  >
+                    <div className="flex items-start gap-3">
+                      <FaShieldAlt className="text-amber-600 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-amber-800 font-medium">Verification Required</p>
+                        <p className="text-xs text-amber-700 mt-1">
+                          Doctor accounts require verification. You'll need to provide your medical license for admin approval.
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* CTA Button */}
+                <motion.button
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleRoleSelection}
+                  disabled={loading}
+                  className="w-full py-4 px-6 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-teal-500/25 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {loading ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      Creating Account...
+                    </span>
+                  ) : (
+                    <>
+                      Continue as {selectedRole === ROLES.DOCTOR ? "Doctor" : "Patient"}
+                      <FaArrowRight className="text-sm" />
+                    </>
+                  )}
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Login Success Modal */}
       <AnimatePresence>
