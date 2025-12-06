@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { AuthContext } from "../../contexts/AuthContext";
 import {
   FaUserMd,
@@ -25,8 +25,11 @@ import {
   FaCheckCircle,
   FaSpinner,
   FaCamera,
+  FaGlobe,
+  FaSearch,
 } from "react-icons/fa";
 import { MdVerified, MdPending, MdLocalHospital } from "react-icons/md";
+import { HiSparkles } from "react-icons/hi";
 
 const DoctorProfile = () => {
   const { apiCall, dbUser, userProfile } = useContext(AuthContext);
@@ -36,6 +39,11 @@ const DoctorProfile = () => {
   const [profile, setProfile] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+
+  // Language Modal State
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [languageSearch, setLanguageSearch] = useState("");
+  const [customLanguage, setCustomLanguage] = useState("");
 
   // Form state
   const [formData, setFormData] = useState({
@@ -136,6 +144,21 @@ const DoctorProfile = () => {
   ];
 
   const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+
+  // Common languages list
+  const commonLanguages = [
+    "English", "Spanish", "French", "German", "Italian", "Portuguese", "Russian",
+    "Chinese (Mandarin)", "Chinese (Cantonese)", "Japanese", "Korean", "Vietnamese",
+    "Arabic", "Hindi", "Bengali", "Urdu", "Punjabi", "Tamil", "Telugu", "Marathi",
+    "Turkish", "Polish", "Dutch", "Greek", "Hebrew", "Swedish", "Norwegian",
+    "Danish", "Finnish", "Czech", "Romanian", "Hungarian", "Thai", "Indonesian",
+    "Malay", "Filipino (Tagalog)", "Swahili", "Amharic", "Hausa", "Yoruba", "Igbo",
+    "Persian (Farsi)", "Pashto", "Kurdish", "Nepali", "Sinhala", "Burmese",
+    "Khmer", "Lao", "Ukrainian", "Serbian", "Croatian", "Bulgarian", "Slovak",
+    "Slovenian", "Lithuanian", "Latvian", "Estonian", "Albanian", "Macedonian",
+    "Catalan", "Basque", "Galician", "Welsh", "Irish", "Scottish Gaelic",
+    "American Sign Language (ASL)", "British Sign Language (BSL)"
+  ];
 
   useEffect(() => {
     fetchProfile();
@@ -244,14 +267,39 @@ const DoctorProfile = () => {
   };
 
   const handleLanguageAdd = () => {
-    const language = prompt("Enter language:");
+    setShowLanguageModal(true);
+    setLanguageSearch("");
+    setCustomLanguage("");
+  };
+
+  const handleLanguageSelect = (language) => {
     if (language && !formData.languages.includes(language)) {
       setFormData((prev) => ({
         ...prev,
         languages: [...prev.languages, language],
       }));
     }
+    setShowLanguageModal(false);
+    setLanguageSearch("");
+    setCustomLanguage("");
   };
+
+  const handleCustomLanguageAdd = () => {
+    if (customLanguage.trim() && !formData.languages.includes(customLanguage.trim())) {
+      setFormData((prev) => ({
+        ...prev,
+        languages: [...prev.languages, customLanguage.trim()],
+      }));
+      setShowLanguageModal(false);
+      setCustomLanguage("");
+    }
+  };
+
+  const filteredLanguages = commonLanguages.filter(
+    (lang) =>
+      lang.toLowerCase().includes(languageSearch.toLowerCase()) &&
+      !formData.languages.includes(lang)
+  );
 
   const handleLanguageRemove = (lang) => {
     setFormData((prev) => ({
@@ -1197,6 +1245,145 @@ const DoctorProfile = () => {
             </div>
           </motion.div>
         )}
+
+        {/* Language Selection Modal */}
+        <AnimatePresence>
+          {showLanguageModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              onClick={() => setShowLanguageModal(false)}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
+              >
+                {/* Modal Header */}
+                <div className="relative bg-gradient-to-r from-teal-500 to-teal-600 p-6 text-white">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl transform translate-x-1/2 -translate-y-1/2" />
+                  <div className="relative">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                          <FaGlobe className="text-2xl" />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-bold">Add Language</h3>
+                          <p className="text-teal-100 text-sm">Select or enter a language you speak</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setShowLanguageModal(false)}
+                        className="p-2 hover:bg-white/20 rounded-full transition"
+                      >
+                        <FaTimes className="text-lg" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Search Bar */}
+                <div className="p-4 border-b border-gray-100">
+                  <div className="relative">
+                    <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search languages..."
+                      value={languageSearch}
+                      onChange={(e) => setLanguageSearch(e.target.value)}
+                      className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                {/* Languages List */}
+                <div className="max-h-64 overflow-y-auto p-4">
+                  {filteredLanguages.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      {filteredLanguages.slice(0, 20).map((language) => (
+                        <button
+                          key={language}
+                          onClick={() => handleLanguageSelect(language)}
+                          className="flex items-center gap-2 px-4 py-3 bg-gray-50 hover:bg-teal-50 hover:text-teal-700 rounded-xl text-left transition group border border-transparent hover:border-teal-200"
+                        >
+                          <span className="w-8 h-8 bg-white group-hover:bg-teal-100 rounded-lg flex items-center justify-center text-gray-400 group-hover:text-teal-600 transition shadow-sm">
+                            <FaLanguage />
+                          </span>
+                          <span className="font-medium text-sm">{language}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : languageSearch ? (
+                    <div className="text-center py-8">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <FaSearch className="text-2xl text-gray-400" />
+                      </div>
+                      <p className="text-gray-500 mb-2">No matching languages found</p>
+                      <p className="text-sm text-gray-400">You can add a custom language below</p>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500">Start typing to search languages</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Custom Language Input */}
+                <div className="p-4 bg-gray-50 border-t border-gray-100">
+                  <p className="text-sm text-gray-600 mb-3 flex items-center gap-2">
+                    <HiSparkles className="text-teal-500" />
+                    Can't find your language? Add it manually:
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Enter language name..."
+                      value={customLanguage}
+                      onChange={(e) => setCustomLanguage(e.target.value)}
+                      onKeyPress={(e) => e.key === "Enter" && handleCustomLanguageAdd()}
+                      className="flex-1 px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
+                    />
+                    <button
+                      onClick={handleCustomLanguageAdd}
+                      disabled={!customLanguage.trim()}
+                      className="px-6 py-3 bg-gradient-to-r from-teal-500 to-teal-600 text-white rounded-xl hover:from-teal-600 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition font-medium shadow-lg shadow-teal-500/25 flex items-center gap-2"
+                    >
+                      <FaPlus />
+                      Add
+                    </button>
+                  </div>
+                </div>
+
+                {/* Currently Selected Languages */}
+                {formData.languages.length > 0 && (
+                  <div className="p-4 border-t border-gray-100">
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                      Currently selected ({formData.languages.length})
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.languages.map((lang) => (
+                        <span
+                          key={lang}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-100 text-teal-700 rounded-full text-sm font-medium"
+                        >
+                          <FaCheckCircle className="text-xs" />
+                          {lang}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
