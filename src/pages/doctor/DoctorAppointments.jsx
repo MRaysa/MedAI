@@ -45,6 +45,7 @@ const DoctorAppointments = () => {
   const [activeFilter, setActiveFilter] = useState("all");
   const [selectedDate, setSelectedDate] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const statusConfig = {
     pending: { label: "Pending", color: "amber", icon: FaHourglassHalf, bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200" },
@@ -62,40 +63,53 @@ const DoctorAppointments = () => {
     chat: { label: "Chat", icon: FaComments, color: "text-pink-600" },
   };
 
+  // Fetch on mount and when filters change
   useEffect(() => {
+    const fetchAppointments = async () => {
+      setLoading(true);
+      try {
+        let url = "/appointments/doctor-appointments";
+        const params = new URLSearchParams();
+
+        // For "all", don't add any filter params - get all appointments
+        if (activeFilter === "upcoming") {
+          params.append("upcoming", "true");
+        } else if (activeFilter !== "all") {
+          params.append("status", activeFilter);
+        }
+
+        if (selectedDate) {
+          params.append("date", selectedDate);
+        }
+
+        if (params.toString()) {
+          url += `?${params.toString()}`;
+        }
+
+        const response = await apiCall(url);
+        if (response.success) {
+          setAppointments(response.data || []);
+          setStats(response.stats || null);
+        } else {
+          console.error("Failed to fetch:", response.message);
+          setAppointments([]);
+          setStats(null);
+        }
+      } catch (error) {
+        console.error("Error fetching appointments:", error);
+        setAppointments([]);
+        setStats(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchAppointments();
-  }, [activeFilter, selectedDate]);
+  }, [activeFilter, selectedDate, apiCall, refreshKey]);
 
-  const fetchAppointments = async () => {
-    setLoading(true);
-    try {
-      let url = "/appointments/doctor-appointments";
-      const params = new URLSearchParams();
-
-      if (activeFilter === "upcoming") {
-        params.append("upcoming", "true");
-      } else if (activeFilter !== "all") {
-        params.append("status", activeFilter);
-      }
-
-      if (selectedDate) {
-        params.append("date", selectedDate);
-      }
-
-      if (params.toString()) {
-        url += `?${params.toString()}`;
-      }
-
-      const response = await apiCall(url);
-      if (response.success) {
-        setAppointments(response.data || []);
-        setStats(response.stats || null);
-      }
-    } catch (error) {
-      console.error("Error fetching appointments:", error);
-    } finally {
-      setLoading(false);
-    }
+  // Refetch function for use in other handlers
+  const refetchAppointments = () => {
+    setRefreshKey(prev => prev + 1);
   };
 
   const handleStatusUpdate = async (appointmentId, newStatus) => {
@@ -107,7 +121,7 @@ const DoctorAppointments = () => {
       });
 
       if (response.success) {
-        fetchAppointments();
+        refetchAppointments();
         setShowDetailModal(false);
       } else {
         alert(response.message || "Failed to update status");
