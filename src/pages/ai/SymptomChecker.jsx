@@ -24,9 +24,16 @@ import {
   FaArrowRight,
   FaRobot,
   FaSpinner,
+  FaPills,
+  FaAppleAlt,
+  FaRunning,
+  FaExclamationCircle,
+  FaBan,
+  FaLeaf,
 } from "react-icons/fa";
-import { MdHealthAndSafety, MdLocalHospital } from "react-icons/md";
+import { MdHealthAndSafety, MdLocalHospital, MdTimer } from "react-icons/md";
 import { HiSparkles } from "react-icons/hi";
+import { GiMedicines } from "react-icons/gi";
 
 const commonSymptoms = [
   "Headache", "Fever", "Cough", "Fatigue", "Nausea",
@@ -607,6 +614,56 @@ const SymptomChecker = () => {
                   </div>
                 )}
 
+                {/* Suggested Medicines */}
+                {result.suggestedMedicines && result.suggestedMedicines.length > 0 && (
+                  <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
+                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                      <FaPills className="text-purple-500" />
+                      Suggested OTC Medicines
+                    </h3>
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4">
+                      <p className="text-amber-800 text-sm flex items-start gap-2">
+                        <FaExclamationTriangle className="mt-0.5 flex-shrink-0" />
+                        Always consult a pharmacist or doctor before taking any medication, especially if you have allergies or are taking other medicines.
+                      </p>
+                    </div>
+                    <div className="grid gap-4">
+                      {result.suggestedMedicines.map((medicine, index) => (
+                        <div key={index} className="p-4 bg-purple-50 rounded-2xl border border-purple-100">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                                <GiMedicines className="text-purple-600" />
+                                {medicine.name}
+                              </h4>
+                              {medicine.brandNames && medicine.brandNames.length > 0 && (
+                                <p className="text-sm text-gray-500">
+                                  Brands: {medicine.brandNames.join(', ')}
+                                </p>
+                              )}
+                            </div>
+                            <span className="px-2 py-1 bg-purple-200 text-purple-800 rounded-full text-xs font-medium">
+                              {medicine.type}
+                            </span>
+                          </div>
+                          <p className="text-gray-700 text-sm mb-2">{medicine.purpose}</p>
+                          {medicine.dosage && (
+                            <p className="text-sm text-gray-600 mb-2">
+                              <strong>Dosage:</strong> {medicine.dosage}
+                            </p>
+                          )}
+                          {medicine.warnings && (
+                            <div className="flex items-start gap-2 mt-2 p-2 bg-red-50 rounded-lg">
+                              <FaBan className="text-red-500 mt-0.5 flex-shrink-0" />
+                              <p className="text-red-700 text-xs">{medicine.warnings}</p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Self-Care Tips */}
                 {result.selfCareTips && result.selfCareTips.length > 0 && (
                   <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
@@ -619,6 +676,92 @@ const SymptomChecker = () => {
                         <li key={index} className="flex items-start gap-2 p-3 bg-pink-50 rounded-xl">
                           <FaCheckCircle className="text-pink-500 mt-0.5 flex-shrink-0" />
                           <span className="text-gray-700 text-sm">{tip}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Dietary Advice */}
+                {result.dietaryAdvice && result.dietaryAdvice.length > 0 && (
+                  <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
+                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                      <FaAppleAlt className="text-green-500" />
+                      Dietary Advice
+                    </h3>
+                    <ul className="grid md:grid-cols-2 gap-3">
+                      {result.dietaryAdvice.map((advice, index) => (
+                        <li key={index} className="flex items-start gap-2 p-3 bg-green-50 rounded-xl">
+                          <FaLeaf className="text-green-500 mt-0.5 flex-shrink-0" />
+                          <span className="text-gray-700 text-sm">{advice}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Lifestyle Changes */}
+                {result.lifestyleChanges && result.lifestyleChanges.length > 0 && (
+                  <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
+                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                      <FaRunning className="text-orange-500" />
+                      Lifestyle Recommendations
+                    </h3>
+                    <ul className="grid md:grid-cols-2 gap-3">
+                      {result.lifestyleChanges.map((change, index) => (
+                        <li key={index} className="flex items-start gap-2 p-3 bg-orange-50 rounded-xl">
+                          <FaCheckCircle className="text-orange-500 mt-0.5 flex-shrink-0" />
+                          <span className="text-gray-700 text-sm">{change}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Recovery Time & Prevention */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  {/* Estimated Recovery Time */}
+                  {result.estimatedRecoveryTime && (
+                    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
+                      <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                        <MdTimer className="text-indigo-500" />
+                        Recovery Time
+                      </h3>
+                      <p className="text-gray-700">{result.estimatedRecoveryTime}</p>
+                    </div>
+                  )}
+
+                  {/* Prevention Tips */}
+                  {result.preventionTips && result.preventionTips.length > 0 && (
+                    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
+                      <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                        <FaShieldAlt className="text-cyan-500" />
+                        Prevention
+                      </h3>
+                      <ul className="space-y-2">
+                        {result.preventionTips.map((tip, index) => (
+                          <li key={index} className="flex items-start gap-2 text-gray-700 text-sm">
+                            <FaCheckCircle className="text-cyan-500 mt-0.5 flex-shrink-0" />
+                            {tip}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                {/* Red Flags Warning */}
+                {result.redFlags && result.redFlags.length > 0 && (
+                  <div className="bg-red-50 rounded-3xl border border-red-200 p-6">
+                    <h3 className="text-lg font-bold text-red-900 mb-4 flex items-center gap-2">
+                      <FaExclamationCircle className="text-red-500" />
+                      Warning Signs - Seek Immediate Care If:
+                    </h3>
+                    <ul className="grid md:grid-cols-2 gap-3">
+                      {result.redFlags.map((flag, index) => (
+                        <li key={index} className="flex items-start gap-2 p-3 bg-red-100 rounded-xl">
+                          <FaExclamationTriangle className="text-red-600 mt-0.5 flex-shrink-0" />
+                          <span className="text-red-800 text-sm font-medium">{flag}</span>
                         </li>
                       ))}
                     </ul>
