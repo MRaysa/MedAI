@@ -23,11 +23,114 @@ import {
   FaSpinner,
   FaMapMarkerAlt,
   FaStar,
+  FaExclamationTriangle,
+  FaTimes,
 } from "react-icons/fa";
 import { MdLocalHospital, MdVerified, MdAccessTime } from "react-icons/md";
 import { BsPatchCheckFill, BsCalendar3, BsClockHistory } from "react-icons/bs";
 import { RiStethoscopeLine } from "react-icons/ri";
 import { HiSparkles } from "react-icons/hi";
+
+// Professional Alert Modal Component
+const AlertModal = ({ isOpen, onClose, type = "info", title, message, actionText = "OK", onAction }) => {
+  if (!isOpen) return null;
+
+  const typeConfig = {
+    success: {
+      icon: FaCheckCircle,
+      bgColor: "bg-emerald-100",
+      iconColor: "text-emerald-500",
+      buttonColor: "from-emerald-500 to-teal-500",
+    },
+    error: {
+      icon: FaTimesCircle,
+      bgColor: "bg-red-100",
+      iconColor: "text-red-500",
+      buttonColor: "from-red-500 to-rose-500",
+    },
+    warning: {
+      icon: FaExclamationTriangle,
+      bgColor: "bg-amber-100",
+      iconColor: "text-amber-500",
+      buttonColor: "from-amber-500 to-orange-500",
+    },
+    info: {
+      icon: FaInfoCircle,
+      bgColor: "bg-blue-100",
+      iconColor: "text-blue-500",
+      buttonColor: "from-blue-500 to-cyan-500",
+    },
+  };
+
+  const config = typeConfig[type] || typeConfig.info;
+  const Icon = config.icon;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          transition={{ type: "spring", duration: 0.5 }}
+          className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header with close button */}
+          <div className="relative px-6 pt-6">
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition"
+            >
+              <FaTimes />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="px-6 pb-6 text-center">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", delay: 0.1 }}
+              className={`w-20 h-20 ${config.bgColor} rounded-full flex items-center justify-center mx-auto mb-5`}
+            >
+              <Icon className={`text-4xl ${config.iconColor}`} />
+            </motion.div>
+
+            <h3 className="text-xl font-bold text-gray-900 mb-2">{title}</h3>
+            <p className="text-gray-600 mb-6 leading-relaxed">{message}</p>
+
+            <div className="flex gap-3 justify-center">
+              {type === "warning" && (
+                <button
+                  onClick={onClose}
+                  className="px-6 py-3 border-2 border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  if (onAction) onAction();
+                  onClose();
+                }}
+                className={`px-8 py-3 bg-gradient-to-r ${config.buttonColor} text-white font-medium rounded-xl hover:shadow-lg transition-all`}
+              >
+                {actionText}
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+};
 
 const BookAppointment = () => {
   const [searchParams] = useSearchParams();
@@ -42,6 +145,31 @@ const BookAppointment = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [bookedSlots, setBookedSlots] = useState([]);
+
+  // Alert modal state
+  const [alertModal, setAlertModal] = useState({
+    isOpen: false,
+    type: "info",
+    title: "",
+    message: "",
+    actionText: "OK",
+    onAction: null,
+  });
+
+  const showAlert = (type, title, message, actionText = "OK", onAction = null) => {
+    setAlertModal({
+      isOpen: true,
+      type,
+      title,
+      message,
+      actionText,
+      onAction,
+    });
+  };
+
+  const closeAlert = () => {
+    setAlertModal((prev) => ({ ...prev, isOpen: false }));
+  };
 
   // Form state
   const [currentStep, setCurrentStep] = useState(1);
@@ -231,34 +359,85 @@ const BookAppointment = () => {
 
   const handleSubmit = async () => {
     if (!selectedDate || !selectedTime) {
-      alert("Please select date and time");
+      showAlert(
+        "warning",
+        "Missing Information",
+        "Please select both a date and time for your appointment before proceeding.",
+        "Select Time"
+      );
+      return;
+    }
+
+    if (!formData.reasonForVisit.trim()) {
+      showAlert(
+        "warning",
+        "Reason Required",
+        "Please provide a reason for your visit so the doctor can prepare for your appointment.",
+        "Add Reason"
+      );
       return;
     }
 
     setSubmitting(true);
     try {
+      const appointmentData = {
+        doctorId,
+        appointmentDate: selectedDate.toISOString(),
+        appointmentTime: selectedTime,
+        consultationType,
+        symptoms: formData.symptoms,
+        reasonForVisit: formData.reasonForVisit,
+        notes: formData.notes,
+      };
+
+      console.log("Booking appointment with data:", appointmentData);
+
       const response = await apiCall("/appointments", {
         method: "POST",
-        body: JSON.stringify({
-          doctorId,
-          appointmentDate: selectedDate.toISOString(),
-          appointmentTime: selectedTime,
-          consultationType,
-          symptoms: formData.symptoms,
-          reasonForVisit: formData.reasonForVisit,
-          notes: formData.notes,
-        }),
+        body: JSON.stringify(appointmentData),
       });
+
+      console.log("Appointment response:", response);
 
       if (response.success) {
         setSuccess(true);
         setCurrentStep(4);
       } else {
-        alert(response.message || "Failed to book appointment");
+        // Map error codes to user-friendly messages
+        const errorMessages = {
+          SLOT_UNAVAILABLE: {
+            title: "Time Slot Unavailable",
+            message: "This time slot has already been booked. Please select a different time or date for your appointment.",
+          },
+          DOCTOR_NOT_FOUND: {
+            title: "Doctor Not Found",
+            message: "The selected doctor is no longer available. Please go back and choose a different doctor.",
+          },
+          MISSING_FIELDS: {
+            title: "Missing Information",
+            message: "Please fill in all required fields before booking your appointment.",
+          },
+          INVALID_DOCTOR_ID: {
+            title: "Invalid Selection",
+            message: "There was an issue with the doctor selection. Please go back and try again.",
+          },
+        };
+
+        const errorInfo = errorMessages[response.code] || {
+          title: "Booking Failed",
+          message: response.message || "We couldn't book your appointment. Please try again later.",
+        };
+
+        showAlert("error", errorInfo.title, errorInfo.message, "Try Again");
       }
     } catch (err) {
       console.error("Error booking appointment:", err);
-      alert("Failed to book appointment. Please try again.");
+      showAlert(
+        "error",
+        "Connection Error",
+        "Unable to connect to the server. Please check your internet connection and try again.",
+        "Retry"
+      );
     } finally {
       setSubmitting(false);
     }
@@ -266,11 +445,21 @@ const BookAppointment = () => {
 
   const nextStep = () => {
     if (currentStep === 1 && !selectedDate) {
-      alert("Please select a date");
+      showAlert(
+        "info",
+        "Select a Date",
+        "Please choose a date from the calendar to continue with your booking.",
+        "Got it"
+      );
       return;
     }
     if (currentStep === 2 && !selectedTime) {
-      alert("Please select a time slot");
+      showAlert(
+        "info",
+        "Select a Time",
+        "Please choose an available time slot to continue with your booking.",
+        "Got it"
+      );
       return;
     }
     setCurrentStep((prev) => Math.min(prev + 1, 3));
@@ -518,11 +707,23 @@ const BookAppointment = () => {
   const calendarDays = generateCalendarDays();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-teal-50/40 py-8">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Back Button */}
-        <Link
-          to={`/doctors/${doctorId}`}
+    <>
+      {/* Professional Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={closeAlert}
+        type={alertModal.type}
+        title={alertModal.title}
+        message={alertModal.message}
+        actionText={alertModal.actionText}
+        onAction={alertModal.onAction}
+      />
+
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-teal-50/40 py-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Back Button */}
+          <Link
+            to={`/doctors/${doctorId}`}
           className="inline-flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-teal-600 hover:bg-white rounded-xl transition-all font-medium mb-6"
         >
           <FaArrowLeft />
@@ -994,7 +1195,8 @@ const BookAppointment = () => {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 
