@@ -32,6 +32,8 @@ import {
   FaArrowLeft,
   FaArrowRight,
   FaImages,
+  FaEdit,
+  FaSave,
 } from "react-icons/fa";
 import { MdLocalHospital, MdMedicalServices } from "react-icons/md";
 import { BsFileEarmarkMedical, BsClockHistory } from "react-icons/bs";
@@ -59,6 +61,7 @@ const Imaging = () => {
   const [selectedStudy, setSelectedStudy] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -272,15 +275,32 @@ const Imaging = () => {
                 </p>
               </div>
             </div>
-            {isDoctor && (
-              <button
-                onClick={() => setShowOrderModal(true)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transition font-medium shadow-lg"
+            <div className="flex items-center gap-3">
+              {/* Quick Navigation Links */}
+              <Link
+                to="/diagnostics/lab-tests"
+                className="flex items-center gap-2 px-4 py-2.5 bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100 transition font-medium text-sm"
               >
-                <FaPlus />
-                Order Imaging
-              </button>
-            )}
+                <BsFileEarmarkMedical />
+                Lab Tests
+              </Link>
+              <Link
+                to="/diagnostics/results"
+                className="flex items-center gap-2 px-4 py-2.5 bg-green-50 text-green-600 rounded-xl hover:bg-green-100 transition font-medium text-sm"
+              >
+                <FaNotesMedical />
+                Results
+              </Link>
+              {isDoctor && (
+                <button
+                  onClick={() => setShowOrderModal(true)}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transition font-medium shadow-lg"
+                >
+                  <FaPlus />
+                  Order Imaging
+                </button>
+              )}
+            </div>
           </div>
         </motion.div>
 
@@ -598,6 +618,18 @@ const Imaging = () => {
                           <FaEye />
                           View
                         </button>
+                        {isDoctor && (study.status === "pending_review" || study.status === "in_progress") && (
+                          <button
+                            onClick={() => {
+                              setSelectedStudy(study);
+                              setShowReportModal(true);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-white bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg hover:from-blue-600 hover:to-indigo-700 transition font-medium text-sm"
+                          >
+                            <FaEdit />
+                            Add Report
+                          </button>
+                        )}
                         {study.reportUrl && (
                           <a
                             href={study.reportUrl}
@@ -680,6 +712,26 @@ const Imaging = () => {
               }}
               imagingTypes={imagingTypes}
               bodyParts={bodyParts}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Add Report Modal (Doctor Only) */}
+        <AnimatePresence>
+          {showReportModal && isDoctor && selectedStudy && (
+            <AddImagingReportModal
+              study={selectedStudy}
+              apiCall={apiCall}
+              onClose={() => {
+                setShowReportModal(false);
+                setSelectedStudy(null);
+              }}
+              onSuccess={() => {
+                setShowReportModal(false);
+                setSelectedStudy(null);
+                fetchImagingStudies();
+              }}
+              getImagingTypeConfig={getImagingTypeConfig}
             />
           )}
         </AnimatePresence>
@@ -1250,7 +1302,7 @@ const OrderImagingModal = ({ apiCall, onClose, onSuccess, imagingTypes, bodyPart
               >
                 <option value="">Choose a patient</option>
                 {patients.map((patient) => (
-                  <option key={patient._id} value={patient._id}>
+                  <option key={patient._id} value={patient.odlUserId || patient._id}>
                     {patient.firstName} {patient.lastName}
                   </option>
                 ))}
@@ -1457,6 +1509,229 @@ const OrderImagingModal = ({ apiCall, onClose, onSuccess, imagingTypes, bodyPart
               <>
                 <TbScan />
                 Order Study
+              </>
+            )}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+// Add Imaging Report Modal (Doctor Only)
+const AddImagingReportModal = ({ study, apiCall, onClose, onSuccess, getImagingTypeConfig }) => {
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    findings: study.findings || "",
+    impression: study.impression || "",
+    recommendations: study.recommendations || "",
+    findingStatus: study.findingStatus || "normal",
+    status: "completed",
+    reportUrl: study.reportUrl || "",
+  });
+
+  const typeConfig = getImagingTypeConfig(study.imagingType);
+  const TypeIcon = typeConfig.icon;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      setLoading(true);
+
+      const response = await apiCall(`/imaging/${study._id}`, {
+        method: "PUT",
+        body: JSON.stringify(formData),
+      });
+
+      if (response.success) {
+        onSuccess();
+      }
+    } catch (error) {
+      console.error("Error saving imaging report:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        className="bg-white rounded-3xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className={`bg-gradient-to-br ${typeConfig.color} p-6 text-white`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                <FaEdit className="text-xl" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold">Add Imaging Report</h2>
+                <p className="text-white/80 text-sm">{study.studyName}</p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-white/20 rounded-xl transition"
+            >
+              <FaTimes className="text-xl" />
+            </button>
+          </div>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto max-h-[60vh]">
+          {/* Study Info (Read-only) */}
+          <div className="grid grid-cols-2 gap-3">
+            {study.patient && (
+              <div className="p-3 bg-gray-50 rounded-xl">
+                <p className="text-xs text-gray-500 mb-1">Patient</p>
+                <p className="font-medium text-gray-900">{study.patient.name}</p>
+              </div>
+            )}
+            <div className="p-3 bg-gray-50 rounded-xl">
+              <p className="text-xs text-gray-500 mb-1">Study Type</p>
+              <p className="font-medium text-gray-900 capitalize">{typeConfig.name} - {study.bodyPart?.replace("_", " ")}</p>
+            </div>
+          </div>
+
+          {/* Findings */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Findings *
+            </label>
+            <textarea
+              value={formData.findings}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, findings: e.target.value }))
+              }
+              placeholder="Describe the radiological findings in detail..."
+              rows={4}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              required
+            />
+          </div>
+
+          {/* Impression */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Impression *
+            </label>
+            <textarea
+              value={formData.impression}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, impression: e.target.value }))
+              }
+              placeholder="Summary and clinical impression..."
+              rows={3}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              required
+            />
+          </div>
+
+          {/* Recommendations */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Recommendations
+            </label>
+            <textarea
+              value={formData.recommendations}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, recommendations: e.target.value }))
+              }
+              placeholder="Any follow-up recommendations..."
+              rows={2}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            />
+          </div>
+
+          {/* Finding Status */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Overall Finding Status *
+            </label>
+            <div className="flex gap-3">
+              {["normal", "abnormal", "critical"].map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() =>
+                    setFormData((prev) => ({ ...prev, findingStatus: status }))
+                  }
+                  className={`flex-1 px-4 py-2.5 rounded-xl font-medium capitalize transition ${
+                    formData.findingStatus === status
+                      ? status === "critical"
+                        ? "bg-red-500 text-white"
+                        : status === "abnormal"
+                        ? "bg-amber-500 text-white"
+                        : "bg-green-500 text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Report URL */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Report PDF URL (Optional)
+            </label>
+            <input
+              type="url"
+              value={formData.reportUrl}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, reportUrl: e.target.value }))
+              }
+              placeholder="https://example.com/report.pdf"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Status Note */}
+          <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
+            <p className="text-sm text-blue-700">
+              <strong>Note:</strong> Saving this report will mark the imaging study as completed.
+            </p>
+          </div>
+        </form>
+
+        {/* Footer */}
+        <div className="bg-gray-50 border-t border-gray-100 p-4 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={loading || !formData.findings || !formData.impression}
+            className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {loading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <FaSave />
+                Save Report
               </>
             )}
           </button>

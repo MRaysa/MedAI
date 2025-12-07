@@ -40,6 +40,7 @@ import { MdScience, MdBiotech, MdLocalHospital, MdOutlineAnalytics } from "react
 import { BsDropletFill, BsGraphUp, BsClockHistory, BsFileEarmarkMedical } from "react-icons/bs";
 import { HiBeaker, HiDocumentReport } from "react-icons/hi";
 import { GiMicroscope, GiDna1 } from "react-icons/gi";
+import { TbScan } from "react-icons/tb";
 
 const DiagnosticResults = () => {
   const { apiCall, dbUser } = useContext(AuthContext);
@@ -236,15 +237,32 @@ const DiagnosticResults = () => {
                 </p>
               </div>
             </div>
-            {isDoctor && (
-              <button
-                onClick={() => setShowUploadModal(true)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:from-emerald-600 hover:to-teal-700 transition font-medium shadow-lg"
+            <div className="flex items-center gap-3">
+              {/* Quick Navigation Links */}
+              <Link
+                to="/diagnostics/lab-tests"
+                className="flex items-center gap-2 px-4 py-2.5 bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100 transition font-medium text-sm"
               >
-                <FaUpload />
-                Upload Results
-              </button>
-            )}
+                <FaFlask />
+                Lab Tests
+              </Link>
+              <Link
+                to="/diagnostics/imaging"
+                className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition font-medium text-sm"
+              >
+                <TbScan />
+                Imaging
+              </Link>
+              {isDoctor && (
+                <button
+                  onClick={() => setShowUploadModal(true)}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:from-emerald-600 hover:to-teal-700 transition font-medium shadow-lg"
+                >
+                  <FaUpload />
+                  Upload Results
+                </button>
+              )}
+            </div>
           </div>
         </motion.div>
 

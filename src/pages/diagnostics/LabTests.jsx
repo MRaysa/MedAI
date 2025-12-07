@@ -27,10 +27,13 @@ import {
   FaShare,
   FaNotesMedical,
   FaClipboardList,
+  FaEdit,
+  FaSave,
 } from "react-icons/fa";
 import { MdScience, MdBiotech, MdLocalHospital } from "react-icons/md";
 import { BsDropletFill, BsGraphUp, BsClockHistory } from "react-icons/bs";
 import { HiBeaker } from "react-icons/hi";
+import { TbScan } from "react-icons/tb";
 
 const LabTests = () => {
   const { apiCall, dbUser } = useContext(AuthContext);
@@ -49,6 +52,7 @@ const LabTests = () => {
   const [selectedTest, setSelectedTest] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -205,6 +209,217 @@ const LabTests = () => {
     );
   });
 
+  // Print Lab Test Report
+  const handlePrintTest = (test) => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("Please allow pop-ups to print the report");
+      return;
+    }
+
+    const resultStatus = test.result?.isAbnormal ? "Abnormal" : "Normal";
+    const resultColor = test.result?.isAbnormal ? "#dc2626" : "#16a34a";
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Lab Test Report - ${test.testName}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+            color: #1f2937;
+            line-height: 1.6;
+          }
+          .header {
+            text-align: center;
+            border-bottom: 3px solid #7c3aed;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+          }
+          .header h1 { color: #7c3aed; font-size: 28px; margin-bottom: 5px; }
+          .header p { color: #6b7280; font-size: 14px; }
+          .section { margin-bottom: 25px; }
+          .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #7c3aed;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+          }
+          .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+          .info-item { background: #f9fafb; padding: 12px; border-radius: 8px; }
+          .info-label { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
+          .info-value { font-size: 14px; font-weight: 500; color: #1f2937; }
+          .result-box {
+            background: ${test.result?.isAbnormal ? '#fef2f2' : '#f0fdf4'};
+            border: 2px solid ${resultColor};
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+          }
+          .result-value { font-size: 32px; font-weight: 700; color: ${resultColor}; }
+          .result-unit { font-size: 18px; color: #6b7280; }
+          .result-status {
+            display: inline-block;
+            padding: 4px 12px;
+            background: ${resultColor};
+            color: white;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 10px;
+          }
+          .reference { font-size: 13px; color: #6b7280; margin-top: 10px; }
+          .notes {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+          }
+          .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            text-align: center;
+            font-size: 12px;
+            color: #9ca3af;
+          }
+          @media print {
+            body { padding: 20px; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Lab Test Report</h1>
+          <p>Generated on ${new Date().toLocaleDateString('en-US', {
+            year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+          })}</p>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Test Information</div>
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="info-label">Test Name</div>
+              <div class="info-value">${test.testName}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Category</div>
+              <div class="info-value" style="text-transform: capitalize;">${test.category?.replace('_', ' ')} Test</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Order Date</div>
+              <div class="info-value">${formatDate(test.orderedDate)}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Completed Date</div>
+              <div class="info-value">${test.completedDate ? formatDate(test.completedDate) : 'Pending'}</div>
+            </div>
+            ${test.lab ? `
+            <div class="info-item">
+              <div class="info-label">Laboratory</div>
+              <div class="info-value">${test.lab}</div>
+            </div>
+            ` : ''}
+            <div class="info-item">
+              <div class="info-label">Status</div>
+              <div class="info-value" style="text-transform: capitalize;">${test.status?.replace('_', ' ')}</div>
+            </div>
+          </div>
+        </div>
+
+        ${test.patient ? `
+        <div class="section">
+          <div class="section-title">Patient Information</div>
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="info-label">Patient Name</div>
+              <div class="info-value">${test.patient.name}</div>
+            </div>
+            ${test.patient.email ? `
+            <div class="info-item">
+              <div class="info-label">Email</div>
+              <div class="info-value">${test.patient.email}</div>
+            </div>
+            ` : ''}
+          </div>
+        </div>
+        ` : ''}
+
+        ${test.orderedBy ? `
+        <div class="section">
+          <div class="section-title">Ordering Physician</div>
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="info-label">Doctor Name</div>
+              <div class="info-value">Dr. ${test.orderedBy.name}</div>
+            </div>
+            ${test.orderedBy.specialization ? `
+            <div class="info-item">
+              <div class="info-label">Specialization</div>
+              <div class="info-value">${test.orderedBy.specialization}</div>
+            </div>
+            ` : ''}
+          </div>
+        </div>
+        ` : ''}
+
+        ${test.result ? `
+        <div class="section">
+          <div class="section-title">Test Results</div>
+          <div class="result-box">
+            <div class="result-value">${test.result.value || 'N/A'}</div>
+            <div class="result-unit">${test.result.unit || ''}</div>
+            <div class="result-status">${resultStatus}</div>
+            ${test.result.referenceRange ? `<div class="reference">Reference Range: ${test.result.referenceRange}</div>` : ''}
+          </div>
+          ${test.result.interpretation ? `
+          <div class="notes" style="margin-top: 15px;">
+            <strong>Interpretation:</strong><br/>
+            ${test.result.interpretation}
+          </div>
+          ` : ''}
+        </div>
+        ` : ''}
+
+        ${test.doctorNotes ? `
+        <div class="section">
+          <div class="section-title">Doctor's Notes</div>
+          <div class="notes">${test.doctorNotes}</div>
+        </div>
+        ` : ''}
+
+        ${test.notes ? `
+        <div class="section">
+          <div class="section-title">Additional Notes</div>
+          <div class="notes">${test.notes}</div>
+        </div>
+        ` : ''}
+
+        <div class="footer">
+          <p>This is a computer-generated report from MedAI Healthcare System</p>
+          <p>For any queries, please contact your healthcare provider</p>
+        </div>
+
+        <script>
+          window.onload = function() { window.print(); }
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -228,15 +443,32 @@ const LabTests = () => {
                 </p>
               </div>
             </div>
-            {isDoctor && (
-              <button
-                onClick={() => setShowOrderModal(true)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl hover:from-purple-600 hover:to-indigo-700 transition font-medium shadow-lg"
+            <div className="flex items-center gap-3">
+              {/* Quick Navigation Links */}
+              <Link
+                to="/diagnostics/imaging"
+                className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition font-medium text-sm"
               >
-                <FaPlus />
-                Order New Test
-              </button>
-            )}
+                <TbScan />
+                Imaging
+              </Link>
+              <Link
+                to="/diagnostics/results"
+                className="flex items-center gap-2 px-4 py-2.5 bg-green-50 text-green-600 rounded-xl hover:bg-green-100 transition font-medium text-sm"
+              >
+                <FaNotesMedical />
+                Results
+              </Link>
+              {isDoctor && (
+                <button
+                  onClick={() => setShowOrderModal(true)}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl hover:from-purple-600 hover:to-indigo-700 transition font-medium shadow-lg"
+                >
+                  <FaPlus />
+                  Order New Test
+                </button>
+              )}
+            </div>
           </div>
         </motion.div>
 
@@ -513,18 +745,35 @@ const LabTests = () => {
                         <FaEye />
                         View Details
                       </button>
-                      {test.status === "completed" && test.reportUrl && (
+                      {isDoctor && (test.status === "pending" || test.status === "in_progress") && (
+                        <button
+                          onClick={() => {
+                            setSelectedTest(test);
+                            setShowUpdateModal(true);
+                          }}
+                          className="flex items-center gap-2 px-4 py-2 text-white bg-gradient-to-r from-purple-500 to-indigo-600 rounded-xl hover:from-purple-600 hover:to-indigo-700 transition font-medium text-sm"
+                        >
+                          <FaEdit />
+                          Update Results
+                        </button>
+                      )}
+                      {test.status === "completed" && (
                         <>
-                          <a
-                            href={test.reportUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          {test.reportUrl && (
+                            <a
+                              href={test.reportUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 px-4 py-2 text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition font-medium text-sm"
+                            >
+                              <FaDownload />
+                              Download
+                            </a>
+                          )}
+                          <button
+                            onClick={() => handlePrintTest(test)}
                             className="flex items-center gap-2 px-4 py-2 text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition font-medium text-sm"
                           >
-                            <FaDownload />
-                            Download
-                          </a>
-                          <button className="flex items-center gap-2 px-4 py-2 text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition font-medium text-sm">
                             <FaPrint />
                             Print
                           </button>
@@ -577,6 +826,7 @@ const LabTests = () => {
               getResultStatus={getResultStatus}
               getCategoryIcon={getCategoryIcon}
               getCategoryColor={getCategoryColor}
+              onPrint={handlePrintTest}
             />
           )}
         </AnimatePresence>
@@ -592,6 +842,25 @@ const LabTests = () => {
                 fetchLabTests();
               }}
               testCategories={testCategories}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Update Results Modal (Doctor Only) */}
+        <AnimatePresence>
+          {showUpdateModal && isDoctor && selectedTest && (
+            <UpdateLabTestModal
+              test={selectedTest}
+              apiCall={apiCall}
+              onClose={() => {
+                setShowUpdateModal(false);
+                setSelectedTest(null);
+              }}
+              onSuccess={() => {
+                setShowUpdateModal(false);
+                setSelectedTest(null);
+                fetchLabTests();
+              }}
             />
           )}
         </AnimatePresence>
@@ -611,6 +880,7 @@ const TestDetailModal = ({
   getResultStatus,
   getCategoryIcon,
   getCategoryColor,
+  onPrint,
 }) => {
   const [expandedSections, setExpandedSections] = useState({
     details: true,
@@ -829,21 +1099,24 @@ const TestDetailModal = ({
         {/* Footer */}
         <div className="bg-gray-50 border-t border-gray-100 p-4 flex justify-end gap-3">
           {test.reportUrl && (
-            <>
-              <a
-                href={test.reportUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2.5 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition font-medium"
-              >
-                <FaDownload />
-                Download Report
-              </a>
-              <button className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-100 transition font-medium">
-                <FaPrint />
-                Print
-              </button>
-            </>
+            <a
+              href={test.reportUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2.5 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition font-medium"
+            >
+              <FaDownload />
+              Download Report
+            </a>
+          )}
+          {test.status === "completed" && (
+            <button
+              onClick={() => onPrint(test)}
+              className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-100 transition font-medium"
+            >
+              <FaPrint />
+              Print
+            </button>
           )}
           <button
             onClick={onClose}
@@ -1009,7 +1282,7 @@ const OrderTestModal = ({ apiCall, onClose, onSuccess, testCategories }) => {
               >
                 <option value="">Choose a patient</option>
                 {patients.map((patient) => (
-                  <option key={patient._id} value={patient._id}>
+                  <option key={patient._id} value={patient.odlUserId || patient._id}>
                     {patient.firstName} {patient.lastName}
                   </option>
                 ))}
@@ -1162,6 +1435,301 @@ const OrderTestModal = ({ apiCall, onClose, onSuccess, testCategories }) => {
               <>
                 <FaFlask />
                 Order Test
+              </>
+            )}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+// Update Lab Test Modal (Doctor Only - for entering results)
+const UpdateLabTestModal = ({ test, apiCall, onClose, onSuccess }) => {
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    status: test.status || "pending",
+    result: {
+      value: test.result?.value || "",
+      unit: test.result?.unit || "",
+      referenceRange: test.result?.referenceRange || "",
+      isAbnormal: test.result?.isAbnormal || false,
+      interpretation: test.result?.interpretation || "",
+    },
+    doctorNotes: test.doctorNotes || "",
+    reportUrl: test.reportUrl || "",
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      setLoading(true);
+
+      // Prepare the update data
+      const updateData = {
+        status: formData.status,
+        doctorNotes: formData.doctorNotes,
+        reportUrl: formData.reportUrl || null,
+      };
+
+      // Only include result if we have values
+      if (formData.result.value) {
+        updateData.result = {
+          value: formData.result.value,
+          unit: formData.result.unit,
+          referenceRange: formData.result.referenceRange,
+          isAbnormal: formData.result.isAbnormal,
+          interpretation: formData.result.interpretation,
+        };
+      }
+
+      const response = await apiCall(`/lab-tests/${test._id}`, {
+        method: "PUT",
+        body: JSON.stringify(updateData),
+      });
+
+      if (response.success) {
+        onSuccess();
+      }
+    } catch (error) {
+      console.error("Error updating lab test:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        className="bg-white rounded-3xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                <FaEdit className="text-xl" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold">Update Lab Test Results</h2>
+                <p className="text-white/80 text-sm">{test.testName}</p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-white/20 rounded-xl transition"
+            >
+              <FaTimes className="text-xl" />
+            </button>
+          </div>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto max-h-[60vh]">
+          {/* Patient Info (Read-only) */}
+          {test.patient && (
+            <div className="p-3 bg-gray-50 rounded-xl">
+              <p className="text-xs text-gray-500 mb-1">Patient</p>
+              <p className="font-medium text-gray-900">{test.patient.name}</p>
+            </div>
+          )}
+
+          {/* Status */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Test Status *
+            </label>
+            <select
+              value={formData.status}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, status: e.target.value }))
+              }
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              required
+            >
+              <option value="pending">Pending</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+
+          {/* Result Section */}
+          <div className="border border-gray-200 rounded-xl p-4 space-y-4">
+            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+              <BsGraphUp className="text-purple-500" />
+              Test Results
+            </h3>
+
+            <div className="grid grid-cols-2 gap-3">
+              {/* Value */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Result Value
+                </label>
+                <input
+                  type="text"
+                  value={formData.result.value}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      result: { ...prev.result, value: e.target.value },
+                    }))
+                  }
+                  placeholder="e.g., 5.2"
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                />
+              </div>
+
+              {/* Unit */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Unit
+                </label>
+                <input
+                  type="text"
+                  value={formData.result.unit}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      result: { ...prev.result, unit: e.target.value },
+                    }))
+                  }
+                  placeholder="e.g., mg/dL"
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Reference Range */}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Reference Range
+              </label>
+              <input
+                type="text"
+                value={formData.result.referenceRange}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    result: { ...prev.result, referenceRange: e.target.value },
+                  }))
+                }
+                placeholder="e.g., 4.0 - 6.0 mg/dL"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+              />
+            </div>
+
+            {/* Is Abnormal */}
+            <div className="flex items-center gap-3">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.result.isAbnormal}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      result: { ...prev.result, isAbnormal: e.target.checked },
+                    }))
+                  }
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
+              </label>
+              <span className="text-sm font-medium text-gray-700">
+                Mark as Abnormal Result
+              </span>
+              {formData.result.isAbnormal && (
+                <FaExclamationTriangle className="text-red-500" />
+              )}
+            </div>
+
+            {/* Interpretation */}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Result Interpretation
+              </label>
+              <textarea
+                value={formData.result.interpretation}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    result: { ...prev.result, interpretation: e.target.value },
+                  }))
+                }
+                placeholder="Clinical interpretation of the results..."
+                rows={2}
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm resize-none"
+              />
+            </div>
+          </div>
+
+          {/* Doctor Notes */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Doctor's Notes
+            </label>
+            <textarea
+              value={formData.doctorNotes}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, doctorNotes: e.target.value }))
+              }
+              placeholder="Add any additional clinical notes, recommendations, or follow-up instructions..."
+              rows={3}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+            />
+          </div>
+
+          {/* Report URL */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Report URL (Optional)
+            </label>
+            <input
+              type="url"
+              value={formData.reportUrl}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, reportUrl: e.target.value }))
+              }
+              placeholder="https://example.com/report.pdf"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            />
+          </div>
+        </form>
+
+        {/* Footer */}
+        <div className="bg-gray-50 border-t border-gray-100 p-4 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="px-5 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl hover:from-purple-600 hover:to-indigo-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {loading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <FaSave />
+                Save Results
               </>
             )}
           </button>
