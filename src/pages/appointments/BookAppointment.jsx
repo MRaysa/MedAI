@@ -68,7 +68,6 @@ const BookAppointment = () => {
 
   useEffect(() => {
     if (!doctorId) {
-      setError("No doctor selected");
       setLoading(false);
       return;
     }
@@ -344,6 +343,102 @@ const BookAppointment = () => {
     );
   }
 
+  // No doctor selected - show doctor selection UI
+  if (!doctorId) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-teal-50/40 py-8 px-4">
+        <div className="max-w-4xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center mb-8"
+          >
+            <div className="w-20 h-20 bg-gradient-to-br from-teal-400 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <FaCalendarAlt className="text-3xl text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Book an Appointment</h1>
+            <p className="text-gray-600 max-w-md mx-auto">
+              Find and select a doctor to schedule your appointment
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-white rounded-3xl shadow-xl p-8"
+          >
+            <div className="grid sm:grid-cols-2 gap-4 mb-8">
+              <Link
+                to="/doctors"
+                className="flex items-center gap-4 p-6 bg-gradient-to-br from-teal-50 to-blue-50 rounded-2xl border-2 border-teal-100 hover:border-teal-300 transition group"
+              >
+                <div className="w-14 h-14 bg-gradient-to-br from-teal-400 to-teal-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition">
+                  <FaUserMd className="text-2xl text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900">Find Doctors</h3>
+                  <p className="text-sm text-gray-500">Browse all available doctors</p>
+                </div>
+              </Link>
+
+              <Link
+                to="/doctors/my-doctors"
+                className="flex items-center gap-4 p-6 bg-gradient-to-br from-violet-50 to-purple-50 rounded-2xl border-2 border-violet-100 hover:border-violet-300 transition group"
+              >
+                <div className="w-14 h-14 bg-gradient-to-br from-violet-400 to-violet-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition">
+                  <FaStethoscope className="text-2xl text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900">My Doctors</h3>
+                  <p className="text-sm text-gray-500">Doctors you've visited before</p>
+                </div>
+              </Link>
+            </div>
+
+            <div className="text-center">
+              <p className="text-gray-500 mb-4">Or search by specialty:</p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {[
+                  "Cardiology",
+                  "Dermatology",
+                  "Neurology",
+                  "Orthopedics",
+                  "Pediatrics",
+                  "General Medicine",
+                ].map((specialty) => (
+                  <Link
+                    key={specialty}
+                    to={`/doctors/specializations?spec=${encodeURIComponent(specialty)}`}
+                    className="px-4 py-2 bg-gray-100 hover:bg-teal-100 text-gray-700 hover:text-teal-700 rounded-full text-sm font-medium transition"
+                  >
+                    {specialty}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Recent Appointments Quick Access */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mt-6 text-center"
+          >
+            <Link
+              to="/appointments/history"
+              className="inline-flex items-center gap-2 text-teal-600 hover:text-teal-700 font-medium"
+            >
+              <BsClockHistory />
+              View Appointment History
+            </Link>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
   if (error || !doctor) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-teal-50/40 flex items-center justify-center px-4">
@@ -355,8 +450,8 @@ const BookAppointment = () => {
           <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <FaTimesCircle className="text-3xl text-red-500" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Error</h2>
-          <p className="text-gray-500 mb-6">{error || "Something went wrong"}</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Doctor Not Found</h2>
+          <p className="text-gray-500 mb-6">{error || "The requested doctor could not be found"}</p>
           <Link
             to="/doctors"
             className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-teal-500 to-teal-600 text-white rounded-xl hover:from-teal-600 hover:to-teal-700 transition font-medium"
