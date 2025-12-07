@@ -38,7 +38,20 @@ import { BiTestTube } from "react-icons/bi";
 import { RiRobot2Fill } from "react-icons/ri";
 
 const HomePage = () => {
-  const { user } = useContext(AuthContext);
+  const { user, dbUser } = useContext(AuthContext);
+
+  // Get dashboard path based on user role
+  const getDashboardPath = () => {
+    switch (dbUser?.role) {
+      case "admin":
+        return "/admin/dashboard";
+      case "doctor":
+        return "/doctor/dashboard";
+      case "patient":
+      default:
+        return "/patient/dashboard";
+    }
+  };
 
   // Animation variants
   const fadeInUp = {
@@ -234,7 +247,7 @@ const HomePage = () => {
               <div className="flex flex-col sm:flex-row gap-4">
                 {user ? (
                   <Link
-                    to="/dashboard"
+                    to={getDashboardPath()}
                     className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-teal-600 font-semibold rounded-xl hover:bg-teal-50 transition-all duration-300 shadow-lg hover:shadow-xl"
                   >
                     Go to Dashboard <FaArrowRight />
@@ -776,7 +789,7 @@ const HomePage = () => {
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 {user ? (
                   <Link
-                    to="/dashboard"
+                    to={getDashboardPath()}
                     className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-teal-600 font-semibold rounded-xl hover:bg-teal-50 transition-all duration-300 shadow-lg"
                   >
                     Go to Dashboard <FaArrowRight />
