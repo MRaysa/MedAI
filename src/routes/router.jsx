@@ -47,6 +47,9 @@ import HealthPredictions from "../pages/ai/HealthPredictions";
 import WellnessTips from "../pages/ai/WellnessTips";
 import HealthAlerts from "../pages/ai/HealthAlerts";
 
+// Settings page
+import Settings from "../pages/Settings";
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -188,6 +191,11 @@ const router = createBrowserRouter([
       {
         path: "/ai/alerts",
         Component: HealthAlerts,
+      },
+      // Settings route
+      {
+        path: "/settings",
+        Component: Settings,
       },
     ],
   },
