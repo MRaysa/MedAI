@@ -41,6 +41,12 @@ import MyBills from "../pages/billing/MyBills";
 import InsuranceClaims from "../pages/billing/InsuranceClaims";
 import PaymentHistory from "../pages/billing/PaymentHistory";
 
+// AI pages
+import SymptomChecker from "../pages/ai/SymptomChecker";
+import HealthPredictions from "../pages/ai/HealthPredictions";
+import WellnessTips from "../pages/ai/WellnessTips";
+import HealthAlerts from "../pages/ai/HealthAlerts";
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -165,6 +171,23 @@ const router = createBrowserRouter([
       {
         path: "/billing/history",
         Component: PaymentHistory,
+      },
+      // AI routes
+      {
+        path: "/ai/symptom-checker",
+        Component: SymptomChecker,
+      },
+      {
+        path: "/ai/predictions",
+        Component: HealthPredictions,
+      },
+      {
+        path: "/ai/wellness",
+        Component: WellnessTips,
+      },
+      {
+        path: "/ai/alerts",
+        Component: HealthAlerts,
       },
     ],
   },
