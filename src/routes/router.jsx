@@ -36,6 +36,11 @@ import LabTests from "../pages/diagnostics/LabTests";
 import DiagnosticResults from "../pages/diagnostics/DiagnosticResults";
 import Imaging from "../pages/diagnostics/Imaging";
 
+// Billing pages
+import MyBills from "../pages/billing/MyBills";
+import InsuranceClaims from "../pages/billing/InsuranceClaims";
+import PaymentHistory from "../pages/billing/PaymentHistory";
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -147,6 +152,19 @@ const router = createBrowserRouter([
       {
         path: "/diagnostics/imaging",
         Component: Imaging,
+      },
+      // Billing routes
+      {
+        path: "/billing",
+        Component: MyBills,
+      },
+      {
+        path: "/billing/insurance",
+        Component: InsuranceClaims,
+      },
+      {
+        path: "/billing/history",
+        Component: PaymentHistory,
       },
     ],
   },
