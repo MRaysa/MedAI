@@ -141,8 +141,8 @@ const Navbar = () => {
       requiresAuth: true,
       children: [
         { name: "Lab Tests", path: "/diagnostics/lab-tests", icon: FaFileMedical },
-        { name: "Test Results", path: "/diagnostics/results", icon: FaChartLine },
-        { name: "Imaging Reports", path: "/diagnostics/imaging", icon: FaNotesMedical },
+        { name: "Medical Imaging", path: "/diagnostics/imaging", icon: FaFileMedical },
+        { name: "Diagnostic Results", path: "/diagnostics/results", icon: FaChartLine },
       ],
     },
     {

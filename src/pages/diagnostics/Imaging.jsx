@@ -40,6 +40,31 @@ import { BsFileEarmarkMedical, BsClockHistory } from "react-icons/bs";
 import { TbScan, TbRadioactive } from "react-icons/tb";
 import { RiBodyScanLine, RiUserHeartLine } from "react-icons/ri";
 
+// Imaging types - defined outside component to avoid recreation
+const imagingTypes = [
+  { id: "xray", name: "X-Ray", icon: TbScan, color: "from-blue-500 to-blue-600" },
+  { id: "ct", name: "CT Scan", icon: TbScan, color: "from-purple-500 to-purple-600" },
+  { id: "mri", name: "MRI", icon: RiBodyScanLine, color: "from-indigo-500 to-indigo-600" },
+  { id: "ultrasound", name: "Ultrasound", icon: TbScan, color: "from-teal-500 to-teal-600" },
+  { id: "mammography", name: "Mammography", icon: MdMedicalServices, color: "from-pink-500 to-pink-600" },
+  { id: "pet", name: "PET Scan", icon: TbRadioactive, color: "from-orange-500 to-orange-600" },
+  { id: "dexa", name: "DEXA Scan", icon: FaUser, color: "from-gray-500 to-gray-600" },
+  { id: "fluoroscopy", name: "Fluoroscopy", icon: TbScan, color: "from-cyan-500 to-cyan-600" },
+];
+
+// Body parts - defined outside component to avoid recreation
+const bodyParts = [
+  { id: "head", name: "Head/Brain", icon: FaUser },
+  { id: "chest", name: "Chest/Lungs", icon: RiBodyScanLine },
+  { id: "heart", name: "Heart", icon: RiUserHeartLine },
+  { id: "abdomen", name: "Abdomen", icon: RiBodyScanLine },
+  { id: "spine", name: "Spine", icon: RiBodyScanLine },
+  { id: "pelvis", name: "Pelvis", icon: RiBodyScanLine },
+  { id: "extremities", name: "Extremities", icon: FaUser },
+  { id: "kidney", name: "Kidneys", icon: RiBodyScanLine },
+  { id: "whole_body", name: "Whole Body", icon: RiBodyScanLine },
+];
+
 const Imaging = () => {
   const { apiCall, dbUser, loading: authLoading, user } = useContext(AuthContext);
   const [loading, setLoading] = useState(true);
@@ -72,68 +97,6 @@ const Imaging = () => {
   const userRole = dbUser?.role;
   const isDoctor = userRole === "doctor";
   const isPatient = userRole === "patient";
-
-  // Show auth loading state
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 rounded-full border-4 border-blue-100 border-t-blue-500 animate-spin mx-auto" />
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show login required message if not authenticated
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-lg p-8 text-center max-w-md">
-          <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <TbScan className="text-4xl text-blue-500" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Login Required</h2>
-          <p className="text-gray-500 mb-6">Please sign in to view your imaging studies.</p>
-          <a
-            href="/signin"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transition font-medium"
-          >
-            Sign In
-          </a>
-        </div>
-      </div>
-    );
-  }
-
-  // Imaging types
-  const imagingTypes = [
-    { id: "xray", name: "X-Ray", icon: TbScan, color: "from-blue-500 to-blue-600" },
-    { id: "ct", name: "CT Scan", icon: TbScan, color: "from-purple-500 to-purple-600" },
-    { id: "mri", name: "MRI", icon: RiBodyScanLine, color: "from-indigo-500 to-indigo-600" },
-    { id: "ultrasound", name: "Ultrasound", icon: TbScan, color: "from-teal-500 to-teal-600" },
-    { id: "mammography", name: "Mammography", icon: MdMedicalServices, color: "from-pink-500 to-pink-600" },
-    { id: "pet", name: "PET Scan", icon: TbRadioactive, color: "from-orange-500 to-orange-600" },
-    { id: "dexa", name: "DEXA Scan", icon: FaUser, color: "from-gray-500 to-gray-600" },
-    { id: "fluoroscopy", name: "Fluoroscopy", icon: TbScan, color: "from-cyan-500 to-cyan-600" },
-  ];
-
-  // Body parts
-  const bodyParts = [
-    { id: "head", name: "Head/Brain", icon: FaUser },
-    { id: "chest", name: "Chest/Lungs", icon: RiBodyScanLine },
-    { id: "heart", name: "Heart", icon: RiUserHeartLine },
-    { id: "abdomen", name: "Abdomen", icon: RiBodyScanLine },
-    { id: "spine", name: "Spine", icon: RiBodyScanLine },
-    { id: "pelvis", name: "Pelvis", icon: RiBodyScanLine },
-    { id: "extremities", name: "Extremities", icon: FaUser },
-    { id: "kidney", name: "Kidneys", icon: RiBodyScanLine },
-    { id: "whole_body", name: "Whole Body", icon: RiBodyScanLine },
-  ];
-
-  useEffect(() => {
-    fetchImagingStudies();
-  }, [typeFilter, statusFilter, bodyPartFilter, dateRange, pagination.page]);
 
   const fetchImagingStudies = async () => {
     try {
@@ -168,6 +131,46 @@ const Imaging = () => {
       setLoading(false);
     }
   };
+
+  // useEffect must be called before any conditional returns (React Rules of Hooks)
+  useEffect(() => {
+    if (user && !authLoading) {
+      fetchImagingStudies();
+    }
+  }, [user, authLoading, typeFilter, statusFilter, bodyPartFilter, dateRange, pagination.page]);
+
+  // Show auth loading state - AFTER all hooks
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 rounded-full border-4 border-blue-100 border-t-blue-500 animate-spin mx-auto" />
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login required message if not authenticated - AFTER all hooks
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl shadow-lg p-8 text-center max-w-md">
+          <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <TbScan className="text-4xl text-blue-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Login Required</h2>
+          <p className="text-gray-500 mb-6">Please sign in to view your imaging studies.</p>
+          <a
+            href="/signin"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transition font-medium"
+          >
+            Sign In
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   const getStatusConfig = (status) => {
     const configs = {

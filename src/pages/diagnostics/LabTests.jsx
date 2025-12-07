@@ -64,15 +64,15 @@ const LabTests = () => {
   const isDoctor = userRole === "doctor";
   const isPatient = userRole === "patient";
 
-  // Test categories
+  // Test categories (Note: Imaging studies like X-Ray, CT, MRI are managed in Medical Imaging page)
   const testCategories = [
     { id: "blood", name: "Blood Tests", icon: FaTint, color: "red" },
     { id: "urine", name: "Urine Tests", icon: BsDropletFill, color: "yellow" },
-    { id: "imaging", name: "Imaging", icon: MdBiotech, color: "blue" },
     { id: "cardiac", name: "Cardiac Tests", icon: FaHeartbeat, color: "pink" },
     { id: "metabolic", name: "Metabolic Panel", icon: MdScience, color: "green" },
     { id: "hormone", name: "Hormone Tests", icon: FaThermometerHalf, color: "purple" },
     { id: "pathology", name: "Pathology", icon: HiBeaker, color: "orange" },
+    { id: "microbiology", name: "Microbiology", icon: MdBiotech, color: "blue" },
     { id: "other", name: "Other Tests", icon: FaFlask, color: "gray" },
   ];
 
@@ -168,11 +168,11 @@ const LabTests = () => {
     const colors = {
       blood: "from-red-500 to-red-600",
       urine: "from-yellow-500 to-yellow-600",
-      imaging: "from-blue-500 to-blue-600",
       cardiac: "from-pink-500 to-pink-600",
       metabolic: "from-green-500 to-green-600",
       hormone: "from-purple-500 to-purple-600",
       pathology: "from-orange-500 to-orange-600",
+      microbiology: "from-blue-500 to-blue-600",
       other: "from-gray-500 to-gray-600",
     };
     return colors[category] || colors.other;
@@ -1145,6 +1145,7 @@ const OrderTestModal = ({ apiCall, onClose, onSuccess, testCategories }) => {
   });
 
   // Common lab tests by category
+  // Note: Imaging studies (X-Ray, CT, MRI, etc.) are ordered from the Medical Imaging page
   const commonTests = {
     blood: [
       "Complete Blood Count (CBC)",
@@ -1164,7 +1165,6 @@ const OrderTestModal = ({ apiCall, onClose, onSuccess, testCategories }) => {
       "24-Hour Urine Protein",
       "Urine Microalbumin",
     ],
-    imaging: ["X-Ray", "Ultrasound", "CT Scan", "MRI", "Mammography"],
     cardiac: ["ECG", "Echocardiogram", "Stress Test", "Holter Monitor", "Troponin"],
     metabolic: [
       "Basic Metabolic Panel",
@@ -1180,6 +1180,14 @@ const OrderTestModal = ({ apiCall, onClose, onSuccess, testCategories }) => {
       "FSH/LH",
     ],
     pathology: ["Biopsy", "Pap Smear", "Tumor Markers", "Histopathology"],
+    microbiology: [
+      "Blood Culture",
+      "Stool Culture",
+      "Throat Swab Culture",
+      "Wound Culture",
+      "Sputum Culture",
+      "CSF Culture",
+    ],
     other: ["Allergy Panel", "Drug Screening", "Genetic Testing"],
   };
 
