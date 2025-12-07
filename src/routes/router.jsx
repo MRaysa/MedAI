@@ -9,6 +9,7 @@ import SignUp from "../components/SignUp";
 import AdminDashboard from "../pages/admin/AdminDashboard";
 import PatientDashboard from "../pages/patient/PatientDashboard";
 import PatientProfile from "../pages/patient/PatientProfile";
+import HealthMetrics from "../pages/patient/HealthMetrics";
 import DoctorDashboard from "../pages/doctor/DoctorDashboard";
 import DoctorProfile from "../pages/doctor/DoctorProfile";
 
@@ -106,6 +107,10 @@ const router = createBrowserRouter([
       {
         path: "/patient/profile",
         Component: PatientProfile,
+      },
+      {
+        path: "/patient/metrics",
+        Component: HealthMetrics,
       },
       {
         path: "/patient/:id",
